@@ -60,6 +60,11 @@ class StripeTransferFactory implements LoggerAwareInterface
     private $taxOrderPostfix;
     private $enablePaymentTaxSplit;
 
+    /**
+     * @var bool
+     */
+    private $enableSubstractTaxesFromTransferAmount;
+
     public function __construct(
         AccountMappingRepository $accountMappingRepository,
         PaymentMappingRepository $paymentMappingRepository,
@@ -69,7 +74,8 @@ class StripeTransferFactory implements LoggerAwareInterface
         StripeClient $stripeClient,
         string $stripeTaxAccount,
         string $taxOrderPostfix,
-        bool $enablePaymentTaxSplit
+        bool $enablePaymentTaxSplit,
+        bool $enableSubstractTaxesFromTransferAmount
     ) {
         $this->accountMappingRepository = $accountMappingRepository;
         $this->paymentMappingRepository = $paymentMappingRepository;
@@ -80,6 +86,7 @@ class StripeTransferFactory implements LoggerAwareInterface
         $this->stripeTaxAccount = $stripeTaxAccount;
         $this->taxOrderPostfix = $taxOrderPostfix;
         $this->enablePaymentTaxSplit = $enablePaymentTaxSplit;
+        $this->enableSubstractTaxesFromTransferAmount = $enableSubstractTaxesFromTransferAmount;
     }
 
     public function createFromOrder(MiraklOrder $order, MiraklPendingDebit $pendingDebit = null): StripeTransfer
@@ -225,6 +232,7 @@ class StripeTransferFactory implements LoggerAwareInterface
         $amount = $order->getAmountDue();
         $commission = $order->getOperatorCommission();
         $transferAmount = $amount - $commission;
+
         if ($this->enablePaymentTaxSplit) {
             $orderTaxTotal = $order->getOrderTaxTotal();
             if ($isForTax) {
@@ -232,7 +240,11 @@ class StripeTransferFactory implements LoggerAwareInterface
             } else {
                 $transferAmount = $transferAmount - $orderTaxTotal;
             }
+        } elseif ($this->enableSubstractTaxesFromTransferAmount) {
+            $orderTaxTotal = $order->getOrderTaxTotal();
+            $transferAmount = $transferAmount - $orderTaxTotal;
         }
+
         if ($transferAmount <= 0) {
             return $this->abortTransfer($transfer, sprintf(
                 StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT,

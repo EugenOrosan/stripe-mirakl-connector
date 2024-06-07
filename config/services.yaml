@@ -41,6 +41,7 @@ parameters:
   app.stripe.webhook_operator_secret: "%env(default:deprecated_webhook_secret:STRIPE_OPERATOR_WEBHOOK_SECRET)%"
   app.stripe.prefill_onboarding: "%env(bool:STRIPE_PREFILL_ONBOARDING)%"
   app.stripe.tax_account: "%env(STRIPE_TAX_ACCOUNT)%"
+  app.stripe.stripe_account_metadata: "%env(STRIPE_ACCOUNT_METADATA)%"
   app.workflow.enable_product_payment_split: "%env(default:deprecated_enable_product_payment_split:bool:ENABLE_PRODUCT_PAYMENT_SPLIT)%"
   app.workflow.enable_service_payment_split: "%env(bool:ENABLE_SERVICE_PAYMENT_SPLIT)%"
   app.workflow.enable_product_payment_refund: "%env(default:deprecated_enable_product_payment_refund:bool:ENABLE_PRODUCT_PAYMENT_REFUND)%"
@@ -48,6 +49,7 @@ parameters:
   app.workflow.enable_seller_onboarding: "%env(bool:ENABLE_SELLER_ONBOARDING)%"
   app.workflow.payment_metadata_commercial_order_id: "%env(default:deprecated_payment_metadata_commercial_order_id:PAYMENT_METADATA_COMMERCIAL_ORDER_ID)%"
   app.workflow.enable_payment_tax_split: "%env(bool:ENABLE_PAYMENT_TAX_SPLIT)%"
+  app.workflow.enable_substract_taxes_from_transfer_amount: "%env(bool:ENABLE_SUBSTRACT_TAXES_FROM_TRANSFER_AMOUNT)%"
   app.mirakl.api_key: "%env(MIRAKL_API_KEY)%"
   app.mirakl.host_name: "%env(MIRAKL_HOST_NAME)%"
   app.mirakl.stripe_custom_field_code: "%env(MIRAKL_CUSTOM_FIELD_CODE)%"
@@ -91,7 +93,9 @@ services:
       $baseHostOverride: "%app.base_host%"
 
       $enablePaymentTaxSplit: "%app.workflow.enable_payment_tax_split%"
+      $enableSubstractTaxesFromTransferAmount: "%app.workflow.enable_substract_taxes_from_transfer_amount%"
       $stripeTaxAccount: "%app.stripe.tax_account%"
+      $stripeAccountMetadata: "%app.stripe.stripe_account_metadata%"
       $taxOrderPostfix: "_TAX"
       $miraklShopKycDisable: "%app.mirakl.shop_kyc_disable%"
 
