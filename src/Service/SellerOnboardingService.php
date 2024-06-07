@@ -93,11 +93,6 @@ class SellerOnboardingService
             }
             $accountMapping->setPayinEnabled((bool) $stripeAccount->charges_enabled);
             $this->accountMappingRepository->persistAndFlush($accountMapping);
-        } else {
-            $stripeAccount = $this->stripeClient->retrieveAccount($accountMapping->getStripeAccountId());
-            if ($stripeAccount && $stripeAccount->id) {
-                $this->updateStripeAccountFromShop($shop, $stripeAccount);
-            }
         }
 
         return $accountMapping;
@@ -107,12 +102,6 @@ class SellerOnboardingService
     {
         $accountMapping->setIgnored($ignored);
         $this->accountMappingRepository->persistAndFlush($accountMapping);
-    }
-
-    protected function updateStripeAccountFromShop(MiraklShop $shop, Account $stripeAccount)
-    {
-        $additionalMetaDataFields = $this->getAdditionalMetaDataFields($shop);
-        $this->stripeClient->updateStripeAccount($stripeAccount->id, [], $additionalMetaDataFields);
     }
 
     /**
@@ -134,34 +123,7 @@ class SellerOnboardingService
             ];
         }
 
-        $additionalMetaDataFields = $this->getAdditionalMetaDataFields($shop);
-
-        $metaData = array_merge($additionalMetaDataFields, [
-            'miraklShopId' => $shop->getId()
-        ]);
-
-        return $this->stripeClient->createStripeAccount($shop->getId(), $details, $metaData);
-    }
-
-    /**
-     * @param $shop
-     * @return array
-     */
-    private function getAdditionalMetaDataFields($shop)
-    {
-        $additionalMetaDataFields = [];
-        if (getenv('STRIPE_ACCOUNT_METADATA') !== null) {
-            $shopData = $shop->getShop();
-            $additionalMetaData = json_decode(getenv('STRIPE_ACCOUNT_METADATA'));
-
-            foreach ($additionalMetaData as $fieldKey => $fieldValue) {
-                if (isset($shopData[$fieldKey])) {
-                    $additionalMetaDataFields[$fieldValue] = $shopData[$fieldKey];
-                }
-            }
-        }
-
-        return $additionalMetaDataFields;
+        return $this->stripeClient->createStripeAccount($shop->getId(), $details, ['miraklShopId' => $shop->getId()]);
     }
 
     /**
