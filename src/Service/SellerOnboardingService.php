@@ -160,7 +160,7 @@ class SellerOnboardingService
     private function getAdditionalMetaDataFields($shop)
     {
         $additionalMetaDataFields = [];
-        if ($this->stripeAccountMetadata !== null) {
+        if ($this->stripeAccountMetadata) {
             $shopData = $shop->getShop();
             $additionalMetaData = json_decode($this->stripeAccountMetadata);
 

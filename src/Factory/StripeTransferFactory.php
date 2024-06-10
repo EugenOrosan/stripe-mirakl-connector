@@ -63,7 +63,7 @@ class StripeTransferFactory implements LoggerAwareInterface
     /**
      * @var bool
      */
-    private $enableSubstractTaxesFromTransferAmount;
+    private $enableSubtractTaxesFromTransferAmount;
 
     public function __construct(
         AccountMappingRepository $accountMappingRepository,
@@ -75,7 +75,7 @@ class StripeTransferFactory implements LoggerAwareInterface
         string $stripeTaxAccount,
         string $taxOrderPostfix,
         bool $enablePaymentTaxSplit,
-        bool $enableSubstractTaxesFromTransferAmount
+        bool $enableSubtractTaxesFromTransferAmount
     ) {
         $this->accountMappingRepository = $accountMappingRepository;
         $this->paymentMappingRepository = $paymentMappingRepository;
@@ -86,7 +86,7 @@ class StripeTransferFactory implements LoggerAwareInterface
         $this->stripeTaxAccount = $stripeTaxAccount;
         $this->taxOrderPostfix = $taxOrderPostfix;
         $this->enablePaymentTaxSplit = $enablePaymentTaxSplit;
-        $this->enableSubstractTaxesFromTransferAmount = $enableSubstractTaxesFromTransferAmount;
+        $this->enableSubtractTaxesFromTransferAmount = $enableSubtractTaxesFromTransferAmount;
     }
 
     public function createFromOrder(MiraklOrder $order, MiraklPendingDebit $pendingDebit = null): StripeTransfer
@@ -240,7 +240,7 @@ class StripeTransferFactory implements LoggerAwareInterface
             } else {
                 $transferAmount = $transferAmount - $orderTaxTotal;
             }
-        } elseif ($this->enableSubstractTaxesFromTransferAmount) {
+        } elseif ($this->enableSubtractTaxesFromTransferAmount) {
             $orderTaxTotal = $order->getOrderTaxTotal();
             $transferAmount = $transferAmount - $orderTaxTotal;
         }
