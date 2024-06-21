@@ -50,6 +50,7 @@ parameters:
   app.workflow.payment_metadata_commercial_order_id: "%env(default:deprecated_payment_metadata_commercial_order_id:PAYMENT_METADATA_COMMERCIAL_ORDER_ID)%"
   app.workflow.enable_payment_tax_split: "%env(bool:ENABLE_PAYMENT_TAX_SPLIT)%"
   app.workflow.enable_subtract_taxes_from_transfer_amount: "%env(bool:ENABLE_SUBTRACT_TAXES_FROM_TRANSFER_AMOUNT)%"
+  app.workflow.process_refunds_without_original_transaction: "%env(bool:PROCESS_REFUNDS_WITHOUT_ORIGINAL_TRANSACTION)%"
   app.mirakl.api_key: "%env(MIRAKL_API_KEY)%"
   app.mirakl.host_name: "%env(MIRAKL_HOST_NAME)%"
   app.mirakl.stripe_custom_field_code: "%env(MIRAKL_CUSTOM_FIELD_CODE)%"
@@ -94,6 +95,7 @@ services:
 
       $enablePaymentTaxSplit: "%app.workflow.enable_payment_tax_split%"
       $enableSubtractTaxesFromTransferAmount: "%app.workflow.enable_subtract_taxes_from_transfer_amount%"
+      $processRefundsWithoutOriginalTransaction: "%app.workflow.process_refunds_without_original_transaction%"
       $stripeTaxAccount: "%app.stripe.tax_account%"
       $stripeAccountMetadata: "%app.stripe.stripe_account_metadata%"
       $taxOrderPostfix: "_TAX"

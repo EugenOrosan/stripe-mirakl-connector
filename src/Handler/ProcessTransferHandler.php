@@ -112,6 +112,9 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
             $message = sprintf('Could not create Stripe Transfer: %s.', $e->getMessage());
             $this->logger->error($message, [
                 'miraklId' => $transfer->getMiraklId(),
+                'transferId' => $transfer->getTransferId(),
+                'transactionId' => $transfer->getTransactionId(),
+                'amount' => $transfer->getAmount(),
                 'stripeErrorCode' => $e->getStripeCode(),
             ]);
 

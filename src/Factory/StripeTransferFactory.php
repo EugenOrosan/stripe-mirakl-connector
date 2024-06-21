@@ -330,6 +330,9 @@ class StripeTransferFactory implements LoggerAwareInterface
                 } else {
                     $transferAmount = $transferAmount - $refundedTax;
                 }
+            } elseif ($this->enableSubtractTaxesFromTransferAmount) {
+                $orderTaxTotal = $order->getOrderTaxTotal() * 100;
+                $transferAmount = $transferAmount - $orderTaxTotal;
             }
             $transfer->setAmount($transferAmount);
             $transfer->setCurrency(strtolower($order->getCurrency()));
@@ -506,7 +509,14 @@ class StripeTransferFactory implements LoggerAwareInterface
     {
         $this->logger->info(
             'Transfer on hold: '.$reason,
-            ['order_id' => $transfer->getMiraklId()]
+            [
+                'order_id' => $transfer->getMiraklId(),
+                'transfer_id' => $transfer->getTransferId(),
+                'transaction_id' => $transfer->getTransactionId(),
+                'status_reason' => $transfer->getStatusReason(),
+                'status' => $transfer->getStatus(),
+                'amount' => $transfer->getAmount()
+            ]
         );
 
         return $transfer
@@ -517,8 +527,15 @@ class StripeTransferFactory implements LoggerAwareInterface
     private function abortTransfer(StripeTransfer $transfer, string $reason): StripeTransfer
     {
         $this->logger->info(
-            'Transfer aborted: '.$reason,
-            ['order_id' => $transfer->getMiraklId()]
+              'Transfer aborted: '.$reason,
+            [
+                'order_id' => $transfer->getMiraklId(),
+                'transfer_id' => $transfer->getTransferId(),
+                'transaction_id' => $transfer->getTransactionId(),
+                'status_reason' => $transfer->getStatusReason(),
+                'status' => $transfer->getStatus(),
+                'amount' => $transfer->getAmount(),
+            ]
         );
 
         return $transfer
@@ -529,8 +546,15 @@ class StripeTransferFactory implements LoggerAwareInterface
     private function ignoreTransfer(StripeTransfer $transfer, string $reason): StripeTransfer
     {
         $this->logger->info(
-            'Transfer ignored: '.$reason,
-            ['order_id' => $transfer->getMiraklId()]
+              'Transfer ignored: '.$reason,
+            [
+                'order_id' => $transfer->getMiraklId(),
+                'transfer_id' => $transfer->getTransferId(),
+                'transaction_id' => $transfer->getTransactionId(),
+                'status_reason' => $transfer->getStatusReason(),
+                'status' => $transfer->getStatus(),
+                'amount' => $transfer->getAmount(),
+            ]
         );
 
         return $transfer
