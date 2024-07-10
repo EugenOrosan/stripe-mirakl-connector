@@ -72,3 +72,4 @@ chown -R postgres:postgres /var/lib/postgresql
 su - postgres -c config_file=/etc/postgresql/postgresql.conf
 su - postgres -c "pg_ctl reload -D /var/lib/postgresql/data"
 ################################################################################
+
