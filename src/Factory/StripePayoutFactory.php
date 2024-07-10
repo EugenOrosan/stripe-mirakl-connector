@@ -118,11 +118,11 @@ class StripePayoutFactory implements LoggerAwareInterface
         $this->logger->info(
               'Payout on hold: '.$reason,
             [
-                'invoice_id' => $payout->getMiraklInvoiceId(),
-                'amount' => $payout->getAmount(),
-                'payout_id' => $payout->getId(),
-                'status' => $payout->getStatus(),
-                'status_reason' => $payout->getStatusReason()
+                'invoiceId' => $payout->getMiraklInvoiceId(),
+                'payoutId' => $payout->getId(),
+                'statusReason' => $payout->getStatusReason(),
+                'miraklShopId' => ($payout->getAccountMapping()) ? $payout->getAccountMapping()->getMiraklShopId() : 'No shop id available.',
+                'accountMapping' => json_encode($payout->getAccountMapping() ?? [])
             ]
         );
 
@@ -136,11 +136,11 @@ class StripePayoutFactory implements LoggerAwareInterface
         $this->logger->info(
             'Payout aborted: '.$reason,
             [
-                'invoice_id' => $payout->getMiraklInvoiceId(),
-                'amount' => $payout->getAmount(),
-                'payout_id' => $payout->getId(),
-                'status' => $payout->getStatus(),
-                'status_reason' => $payout->getStatusReason()
+                'invoiceId' => $payout->getMiraklInvoiceId(),
+                'payoutId' => $payout->getId(),
+                'statusReason' => $payout->getStatusReason(),
+                'miraklShopId' => ($payout->getAccountMapping()) ? $payout->getAccountMapping()->getMiraklShopId() : 'No shop id available.',
+                'accountMapping' => json_encode($payout->getAccountMapping() ?? [])
             ]
         );
 
@@ -153,7 +153,13 @@ class StripePayoutFactory implements LoggerAwareInterface
     {
         $this->logger->info(
             'Payout created',
-            ['invoice_id' => $payout->getMiraklInvoiceId()]
+            [
+                'invoiceId' => $payout->getMiraklInvoiceId(),
+                'payoutId' => $payout->getId(),
+                'statusReason' => $payout->getStatusReason(),
+                'miraklShopId' => ($payout->getAccountMapping()) ? $payout->getAccountMapping()->getMiraklShopId() : 'No shop id available.',
+                'accountMapping' => json_encode($payout->getAccountMapping() ?? [])
+            ]
         );
 
         $payout->setStatusReason(null);

@@ -116,6 +116,11 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
                 'transactionId' => $transfer->getTransactionId(),
                 'amount' => $transfer->getAmount(),
                 'stripeErrorCode' => $e->getStripeCode(),
+                'miraklShopId' => $transfer->getAccountMapping()->getMiraklShopId() ?? 'No shop id available.',
+                'accountMapping' => json_encode($transfer->getAccountMapping() ?? []),
+                'file' => $e->getFile() ??  'No file available.',
+                'line' => $e->getLine() ?? 'No line available.',
+                'trace' => $e->getTraceAsString() ?? 'No trace available.',
             ]);
 
             $transfer->setStatus(StripeTransfer::TRANSFER_FAILED);

@@ -510,12 +510,12 @@ class StripeTransferFactory implements LoggerAwareInterface
         $this->logger->info(
             'Transfer on hold: '.$reason,
             [
-                'order_id' => $transfer->getMiraklId(),
-                'transfer_id' => $transfer->getTransferId(),
-                'transaction_id' => $transfer->getTransactionId(),
-                'status_reason' => $transfer->getStatusReason(),
-                'status' => $transfer->getStatus(),
-                'amount' => $transfer->getAmount()
+                'orderId' => $transfer->getMiraklId(),
+                'transferId' => $transfer->getTransferId(),
+                'transactionId' => $transfer->getTransactionId(),
+                'statusReason' => $transfer->getStatusReason(),
+                'miraklShopId' => ($transfer->getAccountMapping()) ? $transfer->getAccountMapping()->getMiraklShopId() : 'No shop id available.',
+                'accountMapping' => json_encode($transfer->getAccountMapping() ?? [])
             ]
         );
 
@@ -529,12 +529,12 @@ class StripeTransferFactory implements LoggerAwareInterface
         $this->logger->info(
               'Transfer aborted: '.$reason,
             [
-                'order_id' => $transfer->getMiraklId(),
-                'transfer_id' => $transfer->getTransferId(),
-                'transaction_id' => $transfer->getTransactionId(),
-                'status_reason' => $transfer->getStatusReason(),
-                'status' => $transfer->getStatus(),
-                'amount' => $transfer->getAmount(),
+                'orderId' => $transfer->getMiraklId(),
+                'transferId' => $transfer->getTransferId(),
+                'transactionId' => $transfer->getTransactionId(),
+                'statusReason' => $transfer->getStatusReason(),
+                'miraklShopId' => ($transfer->getAccountMapping()) ? $transfer->getAccountMapping()->getMiraklShopId() : 'No shop id available.',
+                'accountMapping' => json_encode($transfer->getAccountMapping() ?? [])
             ]
         );
 
@@ -548,12 +548,12 @@ class StripeTransferFactory implements LoggerAwareInterface
         $this->logger->info(
               'Transfer ignored: '.$reason,
             [
-                'order_id' => $transfer->getMiraklId(),
-                'transfer_id' => $transfer->getTransferId(),
-                'transaction_id' => $transfer->getTransactionId(),
-                'status_reason' => $transfer->getStatusReason(),
-                'status' => $transfer->getStatus(),
-                'amount' => $transfer->getAmount(),
+                'orderId' => $transfer->getMiraklId(),
+                'transferId' => $transfer->getTransferId(),
+                'transactionId' => $transfer->getTransactionId(),
+                'statusReason' => $transfer->getStatusReason(),
+                'miraklShopId' => ($transfer->getAccountMapping()) ? $transfer->getAccountMapping()->getMiraklShopId() : 'No shop id available.',
+                'accountMapping' => json_encode($transfer->getAccountMapping() ?? [])
             ]
         );
 

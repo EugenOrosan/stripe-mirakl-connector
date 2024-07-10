@@ -55,6 +55,9 @@ class CapturePendingPaymentHandler implements MessageHandlerInterface, LoggerAwa
                 'mirakl_commercial_id' => $paymentMapping->getMiraklCommercialOrderId(),
                 'amount' => $message->getAmount(),
                 'stripeErrorCode' => $e->getStripeCode(),
+                'file' => $e->getFile() ??  'No file available.',
+                'line' => $e->getLine() ?? 'No line available.',
+                'trace' => $e->getTraceAsString() ?? 'No trace available.',
             ]);
         }
     }

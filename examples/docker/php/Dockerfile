@@ -88,6 +88,7 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
 # Create supervisor log directory and let www-data user read it
 RUN chown -R www-data /var/log/supervisor
 
+USER www-data
 CMD ["/usr/share/php_run.sh"]
 
 FROM nginx:latest as nginx

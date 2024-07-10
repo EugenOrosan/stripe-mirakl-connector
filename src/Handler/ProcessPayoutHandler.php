@@ -64,6 +64,9 @@ class ProcessPayoutHandler implements MessageHandlerInterface, LoggerAwareInterf
                     'stripeAccountId' => $accountMapping->getStripeAccountId(),
                     'stripePayoutId' => $payout->getMiraklInvoiceId(),
                     'stripeErrorCode' => $e->getStripeCode(),
+                    'file' => $e->getFile() ??  'No file available.',
+                    'line' => $e->getLine() ?? 'No line available.',
+                    'trace' => $e->getTraceAsString() ?? 'No trace available.',
                 ]
             );
 

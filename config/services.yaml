@@ -142,7 +142,7 @@ services:
     calls:
       - method: setFormatter
         arguments:
-            - '@monolog.formatter.html'
+          - '@monolog.formatter.html'
     arguments:
       $mailer: '@mailer'
       $messageFactory: '@symfony_mailer_monolog.mail_message_factory'
@@ -154,31 +154,31 @@ services:
 
   App\Command\SellerOnboardingCommand:
     calls:
-        - setLogger: ['@monolog.logger.onboarding']
+      - setLogger: ['@monolog.logger.onboarding']
 
   App\Command\AlertingCommand:
     calls:
-        - setLogger: ['@monolog.logger.failed_operation']
+      - setLogger: ['@monolog.logger.failed_operation']
 
   App\Command\PaymentRefundCommand:
     calls:
-        - setLogger: ['@monolog.logger.process_refund']
+      - setLogger: ['@monolog.logger.process_refund']
 
   App\Command\PaymentSplitCommand:
     calls:
-        - setLogger: ['@monolog.logger.process_transfer']
+      - setLogger: ['@monolog.logger.process_transfer']
 
   App\Command\PaymentValidationCommand:
     calls:
-        - setLogger: ['@monolog.logger.pending_debit']
+      - setLogger: ['@monolog.logger.pending_debit']
 
   App\Command\SellerSettlementCommand:
     calls:
-        - setLogger: ['@monolog.logger.process_payout']
-        
+      - setLogger: ['@monolog.logger.process_payout']
+
   App\Command\SellerMonitorKYCStatusCommand:
     calls:
-        - setLogger: ['@monolog.logger.monitor_kyc_status']        
+      - setLogger: ['@monolog.logger.monitor_kyc_status']
 
   App\Service\StripeClient:
     bind:
