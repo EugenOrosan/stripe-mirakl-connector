@@ -55,8 +55,8 @@ PGPASSWORD=$PASSWORD psql -U $USER -d $DB_NAME -c "ALTER SYSTEM SET ssl_crl_file
 PGPASSWORD=$PASSWORD psql -U $USER -d $DB_NAME -c "ALTER SYSTEM SET ssl_ciphers TO 'HIGH:MEDIUM:+3DES:!aNULL';"
 
 # Uncomment the following lines to enable logging for connections and hostnames
-PGPASSWORD=$PASSWORD psql -U $USER -d $DB_NAME -c "ALTER SYSTEM SET log_connections TO 'on';"
-PGPASSWORD=$PASSWORD psql -U $USER -d $DB_NAME -c "ALTER SYSTEM SET log_hostname TO 'on';"
+#PGPASSWORD=$PASSWORD psql -U $USER -d $DB_NAME -c "ALTER SYSTEM SET log_connections TO 'on';"
+#PGPASSWORD=$PASSWORD psql -U $USER -d $DB_NAME -c "ALTER SYSTEM SET log_hostname TO 'on';"
 
 # Set ownership and permissions for the SSL certificates and config files
 chown postgres:postgres /etc/ssl/private/server.key
