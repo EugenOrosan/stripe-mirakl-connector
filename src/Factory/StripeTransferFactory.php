@@ -331,8 +331,9 @@ class StripeTransferFactory implements LoggerAwareInterface
                     $transferAmount = $transferAmount - $refundedTax;
                 }
             } elseif ($this->enableSubtractTaxesFromTransferAmount) {
-                $orderTaxTotal = $order->getOrderTaxTotal() * 100;
-                $transferAmount = $transferAmount - $orderTaxTotal;
+                $refundedTax = $order->getRefundedTax($refund);
+                $refundedTax = gmp_intval((string) ($refundedTax * 100));
+                $transferAmount = $transferAmount - $refundedTax;
             }
             $transfer->setAmount($transferAmount);
             $transfer->setCurrency(strtolower($order->getCurrency()));
