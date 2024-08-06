@@ -2,23 +2,13 @@ version: '3.8'
 
 services:
   db:
-    env_file:
-      - .env
-    build:
-      context: .
-      dockerfile: ./postgres/Dockerfile
-    expose:
-      - "5432"
+    image: postgres:14.0-alpine
     ports:
       - "5432:5432"
     environment:
       POSTGRES_DB: symfony
       POSTGRES_USER: symfony
       POSTGRES_PASSWORD: symfony
-      PGSSLROOTCERT: ${PGSSLROOTCERT}
-      PGSSLCERT: ${PGSSLCERT}
-      PGSSLKEY: ${PGSSLKEY}
-
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U symfony" ]
       interval: 30s
@@ -47,6 +37,5 @@ services:
         condition: service_started
     ports:
       - "8000:8000"
-volumes:
-  postgres-data:
 
+        
