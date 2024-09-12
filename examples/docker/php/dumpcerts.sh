@@ -20,3 +20,4 @@ if [[ -n "${POSTGRES_SSL_CLIENT_CERT}" ]] && [[ "${POSTGRES_SSL_CLIENT_CERT}" !=
     echo "Writing postgres ssl client cert"
     build_file "${POSTGRES_SSL_CLIENT_CERT}" "${CERT_DIR}/postgres-client.crt"
 fi
+
