@@ -141,4 +141,3 @@ COPY examples/docker_ssl/nginx/nginxlogrotate /etc/logrotate.d/nginx
 
 EXPOSE 8000
 EXPOSE 443
-

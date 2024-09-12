@@ -34,4 +34,3 @@ if [[ -n "${PGSSLCERT}" ]] && [[ "${PGSSLCERT}" != "None" ]]; then
 fi
 
 echo 'End DB SSL setup'
-
