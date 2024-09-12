@@ -64,7 +64,12 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
             switch ($type) {
                 case StripeTransfer::TRANSFER_PRODUCT_ORDER:
                 case StripeTransfer::TRANSFER_SERVICE_ORDER:
+                case StripeTransfer::TRANSFER_REFUND:
+                case StripeTransfer::TRANSFER_EXTRA_INVOICES:
+                case StripeTransfer::TRANSFER_SUBSCRIPTION:
                 case StripeTransfer::TRANSFER_EXTRA_CREDITS:
+                    break;
+                case StripeTransfer::TRANSFER_INVOICE:
                     $accountMapping = $transfer->getAccountMapping();
                     assert(null !== $accountMapping);
                     assert(null !== $accountMapping->getStripeAccountId());
@@ -74,29 +79,6 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
                         $currency,
                         $amount,
                         $accountMapping->getStripeAccountId(),
-                        $transfer->getTransactionId(),
-                        $metadata
-                    );
-                    break;
-                case StripeTransfer::TRANSFER_SUBSCRIPTION:
-                case StripeTransfer::TRANSFER_EXTRA_INVOICES:
-                    $accountMapping = $transfer->getAccountMapping();
-                    assert(null !== $accountMapping);
-                    assert(null !== $accountMapping->getStripeAccountId());
-
-                    $metadata['miraklShopId'] = $accountMapping->getMiraklShopId();
-                    $response = $this->stripeClient->createTransferFromConnectedAccount(
-                        $currency,
-                        $amount,
-                        $accountMapping->getStripeAccountId(),
-                        $metadata
-                    );
-                    break;
-                case StripeTransfer::TRANSFER_REFUND:
-                    assert(null !== $transfer->getTransactionId());
-
-                    $response = $this->stripeClient->reverseTransfer(
-                        $amount,
                         $transfer->getTransactionId(),
                         $metadata
                     );

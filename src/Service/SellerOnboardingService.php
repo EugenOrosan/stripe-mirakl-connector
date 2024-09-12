@@ -160,8 +160,8 @@ class SellerOnboardingService
     private function getAdditionalMetaDataFields($shop)
     {
         $additionalMetaDataFields = [];
+        $shopData = $shop->getShop();
         if ($this->stripeAccountMetadata) {
-            $shopData = $shop->getShop();
             $additionalMetaData = json_decode($this->stripeAccountMetadata);
 
             foreach ($additionalMetaData as $fieldKey => $fieldValue) {
@@ -169,6 +169,10 @@ class SellerOnboardingService
                     $additionalMetaDataFields[$fieldValue] = $shopData[$fieldKey];
                 }
             }
+        }
+
+        if (isset($shopData['channels'])) {
+            $additionalMetaDataFields['channels'] = implode(', ', $shopData['channels'] ?? []);
         }
 
         return $additionalMetaDataFields;
