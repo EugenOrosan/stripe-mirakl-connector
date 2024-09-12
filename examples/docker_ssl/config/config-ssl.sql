@@ -8,4 +8,3 @@ ALTER SYSTEM SET ssl_crl_file TO '';
 ALTER SYSTEM SET ssl_ciphers TO 'HIGH:MEDIUM:+3DES:!aNULL';
 -- ALTER SYSTEM SET log_connections TO 'on';
 -- ALTER SYSTEM SET log_hostname TO 'on';
-
