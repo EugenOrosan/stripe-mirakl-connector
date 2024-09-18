@@ -395,6 +395,19 @@ class StripeTransferFactory implements LoggerAwareInterface
             return $this->markTransferAsCreated($transfer);
         }
 
+        // Shop must have a Stripe account
+        try {
+            $shop_accountMapping = $this->getAccountMapping($invoice['shop_id'] ?? 0);
+        } catch (InvalidArgumentException $e) {
+            // Onboarding still to be completed, let's wait
+            return $this->putTransferOnHold($transfer, $e->getMessage());
+        }
+        if ($shop_accountMapping->getIgnored()) {
+            $shopId = $shop_accountMapping->getMiraklShopId();
+
+            return $this->ignoreTransfer($transfer, "Shop $shopId is ignored");
+        }
+
         // Save Stripe account corresponding with this shop
         try {
             $transfer->setAccountMapping($this->getAccountMapping($invoice['shop_id'] ?? 0));
@@ -580,7 +593,7 @@ class StripeTransferFactory implements LoggerAwareInterface
     private function abortTransfer(StripeTransfer $transfer, string $reason): StripeTransfer
     {
         $this->logger->info(
-              'Transfer aborted: '.$reason,
+            'Transfer aborted: '. $reason,
             [
                 'orderId' => $transfer->getMiraklId(),
                 'transferId' => $transfer->getTransferId(),
@@ -599,7 +612,7 @@ class StripeTransferFactory implements LoggerAwareInterface
     private function ignoreTransfer(StripeTransfer $transfer, string $reason): StripeTransfer
     {
         $this->logger->info(
-              'Transfer ignored: '.$reason,
+            'Transfer ignored: '. $reason,
             [
                 'orderId' => $transfer->getMiraklId(),
                 'transferId' => $transfer->getTransferId(),
