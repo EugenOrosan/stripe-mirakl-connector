@@ -136,7 +136,7 @@ class SellerOnboardingService
                     'name' => $rawShop['shop_name'] ?? null,
                     'url' => $rawShop['contact_informations']['web_site'] ?? null,
                     'support_email' => $rawShop['contact_informations']['email'] ?? null
-                ],
+                ]
             ];
 
             if ($rawShop['contact_informations']['phone'] && $rawShop['contact_informations']['phone'] != '') {
