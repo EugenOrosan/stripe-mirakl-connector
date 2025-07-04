@@ -176,6 +176,10 @@ services:
     calls:
       - setLogger: ['@monolog.logger.process_payout']
 
+  App\Command\PaymentTopupCommand:
+    calls:
+      - setLogger: [ '@monolog.logger.process_topup' ]
+
   App\Command\SellerMonitorKYCStatusCommand:
     calls:
       - setLogger: ['@monolog.logger.monitor_kyc_status']

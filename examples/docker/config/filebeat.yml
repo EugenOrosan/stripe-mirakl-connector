@@ -45,6 +45,7 @@ filebeat.inputs:
     - /var/log/supervisor/process_transfers.log
     - /var/log/supervisor/process_payouts.log
     - /var/log/supervisor/process_refunds.log
+    - /var/log/supervisor/process_topups.log
   fields:
     emitter: "SUPERVISOR"
     level_name: "INFO"
@@ -63,6 +64,7 @@ filebeat.inputs:
     - /var/log/supervisor/cancel_pending_payment-error.log
     - /var/log/supervisor/process_transfers-error.log
     - /var/log/supervisor/process_payouts-error.log
+    - /var/log/supervisor/process_topups-error.log
     - /var/log/supervisor/process_refunds-error.log
   fields:
     emitter: "SUPERVISOR"
@@ -124,6 +126,13 @@ processors:
       - add_fields:
           when:
             equals:
+              job_name: "process_topups"
+          target: ""
+          fields:
+            job_name: "Top up"
+      - add_fields:
+          when:
+            equals:
               job_name: "failed_operation"
           target: ""
           fields:
@@ -175,6 +184,13 @@ processors:
           target: ""
           fields:
             job_name: "Seller settlement"
+      - add_fields:
+          when:
+            contains:
+              job.command: "process-topups"
+          target: ""
+          fields:
+            job_name: "Top up"
       - add_fields:
           when:
             contains:

@@ -135,11 +135,19 @@ class SellerOnboardingService
                 'business_profile' => [
                     'name' => $rawShop['shop_name'] ?? null,
                     'url' => $rawShop['contact_informations']['web_site'] ?? null,
-                    'support_email' => $rawShop['contact_informations']['email'] ?? null
+                    'support_email' => $rawShop['contact_informations']['email'] ?? null,
+                    'support_address' => [
+                        'line1' => $rawShop['contact_informations']['street1'] ?? null,
+                        'line2' => $rawShop['contact_informations']['street2'] ?? null,
+                        'city' => $rawShop['contact_informations']['city'] ?? null,
+                        'state' => $rawShop['contact_informations']['state'] ?? null,
+                        'postal_code' => $rawShop['contact_informations']['zip_code'] ?? null,
+                        'country' => $rawShop['contact_informations']['country'] ?? null,
+                    ]
                 ]
             ];
 
-            if ($rawShop['contact_informations']['phone'] && $rawShop['contact_informations']['phone'] != '') {
+            if (isset($rawShop['contact_informations']['phone']) && $rawShop['contact_informations']['phone'] != '') {
                 $details['business_profile']['support_phone'] = $rawShop['contact_informations']['phone'];
             }
         }
