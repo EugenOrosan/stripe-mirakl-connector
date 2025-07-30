@@ -67,52 +67,46 @@ class StripeTopupFactory implements LoggerAwareInterface
         // Amount and currency
         try {
             $amount = 0;
-            $this->logger->info('Calculating total amount from invoices', ['invoiceCount' => count($invoices)]);
+            $this->logger->info('Calculating total amount from invoices, invoiceCount ' . count($invoices));
 
             foreach ($invoices as $invoice) {
-                $this->logger->info('Start processing invoice', [
-                    'invoiceId' => $invoice['invoice_id'],
-                    'shopId' => $invoice['shop_id'] ?? 0,
-                ]);
+                $this->logger->info('Start processing invoice: ' . $invoice['invoice_id'] . ', shopId: ' . ($invoice['shop_id'] ?? 0));
                 $shop_accountMapping = $this->getAccountMapping($invoice['shop_id'] ?? 0);
 
                 if ($shop_accountMapping->getIgnored()) {
-                    $this->logger->info('Shop is ignored, skipping invoice', ['shopId' => $shop_accountMapping->getMiraklShopId()]);
+                    $this->logger->info('Shop is ignored, skipping invoice, shopId: ' . $shop_accountMapping->getMiraklShopId());
+                    continue;
+                }
+
+                if (!$shop_accountMapping->getPayoutEnabled()) {
+                    $this->logger->error('Topup - Payout not enabled for shop, shopId: ' . $shop_accountMapping->getMiraklShopId() . ', continue to next invoice.');
                     continue;
                 }
 
                 $this->logger->info(
-                    'Processing invoice',
-                    [
-                        'invoiceId' => $invoice['invoice_id'],
-                        'shopId' => $shop_accountMapping->getMiraklShopId(),
-                        'ignored' => $shop_accountMapping->getIgnored(),
-                    ]
+                    'Processing invoice: ' . $invoice['invoice_id'] . ', shopId: ' . $shop_accountMapping->getMiraklShopId() . ', ignored: ' . $shop_accountMapping->getIgnored()
                 );
 
                 $invoiceAmount = $this->getInvoiceAmount($invoice, $mclient);
-                $this->logger->info('Invoice amount calculated', ['invoiceId' => $invoice['invoice_id'], 'amount' => $invoiceAmount]);
-
-                $amount += $this->getInvoiceAmount($invoice, $mclient);
+                $this->logger->info('Invoice amount calculated, invoiceId: ' . $invoice['invoice_id'] . ', amount: ' . $invoiceAmount);
+                $amount += $invoiceAmount;
             }
 
             $topup->setAmount($amount);
         } catch (InvalidArgumentException $e) {
-            $this->logger->error('Error during invoice processing', ['message' => $e->getMessage()]);
+            $this->logger->error('Error during invoice processing, message: ' . $e->getMessage());
             return $this->abortTopup($topup, $e->getMessage());
         }
 
         // All good
-        $this->logger->info('Topup completed successfully', [
-            'topupAmount' => $topup->getAmount()
-        ]);
+        $this->logger->info('Topup completed successfully, topupAmount: ' . $amount);
         return $topup->setStatus(StripeTopup::TOPUP_PENDING);
     }
 
     private function getAccountMapping(int $shopId): AccountMapping
     {
         if (!$shopId) {
-            $this->logger->error('Topup - No shop ID provided', ['shopId' => $shopId]);
+            $this->logger->error('Topup - No shop ID provided, shopId ' . $shopId);
             throw new InvalidArgumentException(StripeTopup::TOPUP_STATUS_REASON_NO_SHOP_ID, 10);
         }
 
@@ -121,16 +115,16 @@ class StripeTopupFactory implements LoggerAwareInterface
         ]);
 
         if (!$mapping) {
-            $this->logger->error('Topup - Shop not ready, no mapping found', ['shopId' => $shopId]);
+            $this->logger->error('Topup - Shop not ready, no mapping found, shopId ' . $shopId);
             throw new InvalidArgumentException(sprintf(StripeTopup::TOPUP_STATUS_REASON_SHOP_NOT_READY, $shopId), 20);
         }
 
         if (!$mapping->getPayoutEnabled()) {
-            $this->logger->error('Topup - Payout not enabled for shop', ['shopId' => $shopId]);
-            throw new InvalidArgumentException(sprintf(StripeTopup::TOPUP_STATUS_REASON_SHOP_TOPUP_DISABLED, $shopId), 20);
+            $this->logger->error('Topup - Payout not enabled for shop, shopId ' . $shopId);
+            //throw new InvalidArgumentException(sprintf(StripeTopup::TOPUP_STATUS_REASON_SHOP_TOPUP_DISABLED, $shopId), 20);
         }
 
-        $this->logger->info('Topup - Account mapping retrieved successfully', ['shopId' => $shopId]);
+        $this->logger->info('Topup - Account mapping retrieved successfully, shopId: ' . $shopId);
 
         return $mapping;
     }
