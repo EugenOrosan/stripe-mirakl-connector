@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Entity\AccountMapping;
 use App\Entity\MiraklShop;
 use App\Repository\AccountMappingRepository;
+use Psr\Log\LoggerInterface;
 use Stripe\Account;
 use Stripe\Exception\ApiErrorException;
 use Symfony\Component\HttpClient\Exception\ClientException;
@@ -58,6 +59,11 @@ class SellerOnboardingService
      */
     private $stripeAccountMetadata;
 
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
     public function __construct(
         AccountMappingRepository $accountMappingRepository,
         MiraklClient $miraklClient,
@@ -67,7 +73,8 @@ class SellerOnboardingService
         bool $stripePrefillOnboarding,
         string $customFieldCode,
         string $ignoredShopFieldCode,
-        string $stripeAccountMetadata
+        string $stripeAccountMetadata,
+        LoggerInterface $logger
     ) {
         $this->accountMappingRepository = $accountMappingRepository;
         $this->miraklClient = $miraklClient;
@@ -78,6 +85,7 @@ class SellerOnboardingService
         $this->customFieldCode = $customFieldCode;
         $this->ignoredShopFieldCode = $ignoredShopFieldCode;
         $this->stripeAccountMetadata = $stripeAccountMetadata;
+        $this->logger = $logger;
     }
 
     /**
@@ -110,22 +118,52 @@ class SellerOnboardingService
         return $accountMapping;
     }
 
+    /**
+     * @param AccountMapping $accountMapping
+     * @param bool $ignored
+     * @return void
+     */
     public function updateAccountMappingIgnored(AccountMapping $accountMapping, bool $ignored): void
     {
         $accountMapping->setIgnored($ignored);
         $this->accountMappingRepository->persistAndFlush($accountMapping);
     }
 
+    /**
+     * @param MiraklShop $shop
+     * @param Account $stripeAccount
+     * @return void
+     */
     protected function updateStripeAccountFromShop(MiraklShop $shop, Account $stripeAccount)
     {
+        $details = $this->getStripeAccountDetailsFromShop($shop);
         $additionalMetaDataFields = $this->getAdditionalMetaDataFields($shop);
-        $this->stripeClient->updateStripeAccount($stripeAccount->id, [], $additionalMetaDataFields);
+
+        $this->logger->info('Updating Stripe Account ' . $stripeAccount->id . ' with details: ' . json_encode($details));
+
+        $this->stripeClient->updateStripeAccount($stripeAccount->id, $details, $additionalMetaDataFields);
     }
 
     /**
      * @throws ApiErrorException
      */
     protected function createStripeAccountFromShop(MiraklShop $shop): Account
+    {
+        $details = $this->getStripeAccountDetailsFromShop($shop);
+        $additionalMetaDataFields = $this->getAdditionalMetaDataFields($shop);
+
+        $metaData = array_merge($additionalMetaDataFields, [
+            'miraklShopId' => $shop->getId()
+        ]);
+
+        return $this->stripeClient->createStripeAccount($shop->getId(), $details, $metaData);
+    }
+
+    /**
+     * @param MiraklShop $shop
+     * @return array
+     */
+    private function getStripeAccountDetailsFromShop(MiraklShop $shop): array
     {
         $details = [];
         if ($this->stripePrefillOnboarding) {
@@ -146,19 +184,15 @@ class SellerOnboardingService
                     ]
                 ]
             ];
+            $this->logger->info('Shop Details from Mirakl: ' . json_encode($rawShop));
+            $this->logger->info('Creating Stripe Account with details: ' . json_encode($details));
 
             if (isset($rawShop['contact_informations']['phone']) && $rawShop['contact_informations']['phone'] != '') {
                 $details['business_profile']['support_phone'] = $rawShop['contact_informations']['phone'];
             }
         }
 
-        $additionalMetaDataFields = $this->getAdditionalMetaDataFields($shop);
-
-        $metaData = array_merge($additionalMetaDataFields, [
-            'miraklShopId' => $shop->getId()
-        ]);
-
-        return $this->stripeClient->createStripeAccount($shop->getId(), $details, $metaData);
+        return $details;
     }
 
     /**
@@ -227,7 +261,7 @@ class SellerOnboardingService
     {
         $loginLink = $this->stripeClient->createLoginLink($accountId);
 
-        return $loginLink['url'].'';
+        return $loginLink['url'] . '';
     }
 
     /**
@@ -273,6 +307,6 @@ class SellerOnboardingService
             $this->redirectOnboarding
         );
 
-        return $accountLink['url'].'';
+        return $accountLink['url'] . '';
     }
 }
