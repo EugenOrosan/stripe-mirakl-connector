@@ -180,9 +180,21 @@ class SellerOnboardingService
                         'city' => $rawShop['contact_informations']['city'] ?? null,
                         'state' => $rawShop['contact_informations']['state'] ?? null,
                         'postal_code' => $rawShop['contact_informations']['zip_code'] ?? null,
-                        'country' => $rawShop['contact_informations']['country'] ?? null,
+                        'country' => isset($rawShop['contact_informations']['country']) ? substr($rawShop['contact_informations']['country'], 0, 2) : null
                     ]
-                ]
+                ],
+                'company' => [
+                    'name' => $rawShop['shop_name'] ?? null,
+                    'address' => [
+                        'line1' => $rawShop['contact_informations']['street1'] ?? null,
+                        'line2' => $rawShop['contact_informations']['street2'] ?? null,
+                        'city' => $rawShop['contact_informations']['city'] ?? null,
+                        'state' => $rawShop['contact_informations']['state'] ?? null,
+                        'postal_code' => $rawShop['contact_informations']['zip_code'] ?? null,
+                        'country' => isset($rawShop['contact_informations']['country']) ? substr($rawShop['contact_informations']['country'], 0, 2) : null
+                    ]
+                ],
+                'email' => $rawShop['contact_informations']['email'] ?? null
             ];
             $this->logger->info('Shop Details from Mirakl: ' . json_encode($rawShop));
             $this->logger->info('Creating Stripe Account with details: ' . json_encode($details));
