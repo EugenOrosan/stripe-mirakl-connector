@@ -94,7 +94,7 @@ class SellerOnboardingCommand extends Command implements LoggerAwareInterface
             try {
                 $accountMapping = $this->sellerOnboardingService->getAccountMappingFromShop($shop);
             } catch (ApiErrorException $e) {
-                $this->logger->error(sprintf('Could not create Stripe Account: %s.', $e->getMessage()), [
+                $this->logger->error(sprintf('Could not create/update Stripe Account: %s.', $e->getMessage()), [
                     'shopId' => $shopId,
                     'stripeErrorCode' => $e->getStripeCode(),
                 ]);

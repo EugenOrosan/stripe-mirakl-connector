@@ -95,6 +95,8 @@ class SellerOnboardingService
     {
         $accountMapping = current($this->accountMappingRepository->findByMiraklShopIds([$shop->getId()]));
         if (!$accountMapping) {
+            $this->logger->info('Started creating Stripe Account for Mirakl Shop: ' . $shop->getId());
+
             // Create Express Account
             $stripeAccount = $this->createStripeAccountFromShop($shop);
 
@@ -108,11 +110,14 @@ class SellerOnboardingService
             }
             $accountMapping->setPayinEnabled((bool) $stripeAccount->charges_enabled);
             $this->accountMappingRepository->persistAndFlush($accountMapping);
+            $this->logger->info('End of creating Stripe Account for Mirakl Shop: ' . $shop->getId() . ' with ID: ' . $stripeAccount->id);
         } else {
             $stripeAccount = $this->stripeClient->retrieveAccount($accountMapping->getStripeAccountId());
+            $this->logger->info('Started updating Stripe Account ID: ' . $accountMapping->getStripeAccountId() . ' for Mirakl Shop: ' . $shop->getId());
             if ($stripeAccount && $stripeAccount->id) {
                 $this->updateStripeAccountFromShop($shop, $stripeAccount);
             }
+            $this->logger->info('End of updating Stripe Account for Mirakl Shop: ' . $shop->getId());
         }
 
         return $accountMapping;
@@ -136,7 +141,7 @@ class SellerOnboardingService
      */
     protected function updateStripeAccountFromShop(MiraklShop $shop, Account $stripeAccount)
     {
-        $details = []; 
+        $details = $this->getStripeAccountDetailsFromShop($shop, 'update');
         $additionalMetaDataFields = $this->getAdditionalMetaDataFields($shop);
 
         $this->logger->info('Updating Stripe Account ' . $stripeAccount->id . ' with details: ' . json_encode($details));
@@ -149,7 +154,7 @@ class SellerOnboardingService
      */
     protected function createStripeAccountFromShop(MiraklShop $shop): Account
     {
-        $details = $this->getStripeAccountDetailsFromShop($shop);
+        $details = $this->getStripeAccountDetailsFromShop($shop, 'create');
         $additionalMetaDataFields = $this->getAdditionalMetaDataFields($shop);
 
         $metaData = array_merge($additionalMetaDataFields, [
@@ -161,9 +166,10 @@ class SellerOnboardingService
 
     /**
      * @param MiraklShop $shop
+     * @param $type
      * @return array
      */
-    private function getStripeAccountDetailsFromShop(MiraklShop $shop): array
+    private function getStripeAccountDetailsFromShop(MiraklShop $shop, $type): array
     {
         $details = [];
         if ($this->stripePrefillOnboarding) {
@@ -197,7 +203,7 @@ class SellerOnboardingService
                 'email' => $rawShop['contact_informations']['email'] ?? null
             ];
             $this->logger->info('Shop Details from Mirakl: ' . json_encode($rawShop));
-            $this->logger->info('Creating Stripe Account with details: ' . json_encode($details));
+            $this->logger->info(ucfirst($type) . ' Stripe Account with details: ' . json_encode($details));
 
             if (isset($rawShop['contact_informations']['phone']) && $rawShop['contact_informations']['phone'] != '') {
                 $details['business_profile']['support_phone'] = $rawShop['contact_informations']['phone'];
