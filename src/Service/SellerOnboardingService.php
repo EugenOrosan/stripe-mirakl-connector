@@ -136,7 +136,7 @@ class SellerOnboardingService
      */
     protected function updateStripeAccountFromShop(MiraklShop $shop, Account $stripeAccount)
     {
-        $details = $this->getStripeAccountDetailsFromShop($shop);
+        $details = []; 
         $additionalMetaDataFields = $this->getAdditionalMetaDataFields($shop);
 
         $this->logger->info('Updating Stripe Account ' . $stripeAccount->id . ' with details: ' . json_encode($details));
