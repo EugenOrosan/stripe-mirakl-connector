@@ -251,7 +251,7 @@ class StripeWebhookEndpoint extends AbstractController implements LoggerAwareInt
             return 'Ignoring account.updated event until details are submitted for account.';
         }
 
-        $accountMapping->setOnboardingToken(null);
+        //$accountMapping->setOnboardingToken(null);
         $accountMapping->setPayoutEnabled($stripeAccount['payouts_enabled']);
         $accountMapping->setPayinEnabled($stripeAccount['charges_enabled']);
         $accountMapping->setDisabledReason($stripeAccount['requirements']['disabled_reason']);

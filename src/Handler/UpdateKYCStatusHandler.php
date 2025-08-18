@@ -4,7 +4,9 @@ namespace App\Handler;
 
 use App\Exception\InvalidStripeAccountException;
 use App\Message\AccountUpdateKYCMessage;
+use App\Repository\AccountMappingRepository;
 use App\Service\MiraklClient;
+use App\Service\SellerOnboardingService;
 use App\Service\StripeClient;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -35,15 +37,31 @@ class UpdateKYCStatusHandler implements MessageHandlerInterface, MessageSubscrib
     private $stripeClient;
 
     /**
+     * @var AccountMappingRepository
+     */
+    private $accountMappingRepository;
+
+    /**
+     * @var SellerOnboardingService
+     */
+    private $sellerOnboardingService;
+
+    /**
      * @param MiraklClient $miraklClient
      * @param StripeClient $stripeClient
+     * @param AccountMappingRepository $accountMappingRepository
+     * @param SellerOnboardingService $sellerOnboardingService
      */
     public function __construct(
         MiraklClient $miraklClient,
-        StripeClient $stripeClient
+        StripeClient $stripeClient,
+        AccountMappingRepository $accountMappingRepository,
+        SellerOnboardingService $sellerOnboardingService,
     ) {
         $this->miraklClient = $miraklClient;
         $this->stripeClient = $stripeClient;
+        $this->accountMappingRepository = $accountMappingRepository;
+        $this->sellerOnboardingService = $sellerOnboardingService;
     }
 
     /**
@@ -59,6 +77,31 @@ class UpdateKYCStatusHandler implements MessageHandlerInterface, MessageSubscrib
         $stripeAccount = $messagePayload['stripeAccount'];
 
         $this->miraklClient->updateShopKycStatus($messagePayload['miraklShopId'], $this->getKYCStatus($stripeAccount));
+
+        if ($stripeAccount->details_submitted) {
+            $this->logger->info('KYC update status - Shop ID ' . $messagePayload['miraklShopId'] . ' has submitted KYC details. Adding login link to shop.');
+            $accountMapping = $this->accountMappingRepository->findOneByStripeAccountId($stripeAccount->id);
+            $this->sellerOnboardingService->addLoginLinkToShop(
+                $messagePayload['miraklShopId'],
+                $accountMapping
+            );
+
+            $shops = $this->miraklClient->listShopsByIds([$messagePayload['miraklShopId']]);
+            foreach ($shops as $shop) {
+                try {
+                    $details = $this->sellerOnboardingService->getStripeAccountDetailsFromShop($shop, 'update');
+                    $this->logger->info('KYC update status - Started updating Stripe Account ID: ' . $accountMapping->getStripeAccountId() . ' for Mirakl Shop: ' . $shop->getId());
+                    if ($stripeAccount && $stripeAccount->id) {
+                        $this->logger->info('KYC update status - Details to update Stripe Account: ' . json_encode($details));
+                        $this->logger->info('KYC update status - Stripe Account ID: ' . $stripeAccount->id);
+                        $this->stripeClient->updateStripeAccount($stripeAccount->id, $details, []);
+                    }
+                    $this->logger->info('KYC update status - End of updating Stripe Account for Mirakl Shop: ' . $shop->getId());
+                } catch (\Throwable $e) {
+                    $this->logger->info('KYC update status - Error updating Stripe Account ID: ' . $accountMapping->getStripeAccountId() . ' for Mirakl Shop: ' . $shop->getId() . ', error: ' . $e->getMessage());
+                }
+            }
+        }
     }
 
     /**

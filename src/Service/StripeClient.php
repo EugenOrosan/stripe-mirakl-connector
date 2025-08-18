@@ -92,6 +92,10 @@ class StripeClient
     {
         return Account::create(array_merge([
             'type' => 'express',
+            'capabilities' => [
+                'card_payments' => ['requested' => true],
+                'transfers' => ['requested' => true],
+            ],
             'settings' => ['payouts' => [
                 'debit_negative_balances' => false,
                 'schedule' => ['interval' => 'manual'],
@@ -108,13 +112,16 @@ class StripeClient
     }
 
     // Account/Login Link
-    public function createAccountLink(string $accountId, string $refreshUrl, string $returnUrl, string $type = 'account_onboarding'): AccountLink
+    public function createAccountLink(string $accountId, string $refreshUrl, string $returnUrl, string $type = 'account_onboarding', string $collect = 'eventually_due'): AccountLink
     {
         return AccountLink::create([
             'account' => $accountId,
             'refresh_url' => $refreshUrl,
             'return_url' => $returnUrl,
             'type' => $type,
+            'collection_options' => [
+                'fields' => 'eventually_due', // full KYC up-front
+            ]
         ]);
     }
 
@@ -279,5 +286,37 @@ class StripeClient
     public function chargeRetrieve(string $stripeChargeId): Charge
     {
         return Charge::retrieve($stripeChargeId);
+    }
+
+    /**
+     * Returns the appropriate link for Mirakl: onboarding if requirements due, otherwise Express Dashboard.
+     */
+    public function getSellerPortalLink(string $accountId, string $refreshUrl, string $returnUrl): string
+    {
+        $account = \Stripe\Account::retrieve($accountId);
+
+        // If requirements are still due, redirect to onboarding
+        if (!empty($account->requirements->currently_due) || !empty($account->requirements->eventually_due)) {
+            $link = \Stripe\AccountLink::create([
+                'account'     => $accountId,
+                'refresh_url' => $refreshUrl,
+                'return_url'  => $returnUrl,
+                'type'        => 'account_onboarding',
+                'collection_options' => [
+                    'fields' => 'eventually_due',
+                ],
+            ]);
+            return $link->url;
+        }
+
+        // Otherwise, provide the Express Dashboard link
+        $session = \Stripe\AccountSession::create([
+            'account' => $accountId,
+            'components' => [
+                'account_management' => ['enabled' => true],
+            ],
+        ]);
+
+        return $session->url;
     }
 }

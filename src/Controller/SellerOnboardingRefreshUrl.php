@@ -87,28 +87,56 @@ class SellerOnboardingRefreshUrl extends AbstractController implements LoggerAwa
      */
     public function onboardingRefresh(Request $request): Response
     {
-        // Retrieve onboarding token
-        $token = (string) $request->query->get('token');
-        if (!$token) {
-            return new Response('Incorrect token', Response::HTTP_BAD_REQUEST);
+        try {
+            // Retrieve onboarding token
+            $token = (string) $request->query->get('token');
+
+            if (!$token) {
+                return new Response('Incorrect token', Response::HTTP_BAD_REQUEST);
+            }
+
+            // Retrieve AccountMapping
+            $accountMapping = $this->accountMappingRepository->findOneByOnboardingToken($token);
+            if (!$accountMapping) {
+                return new Response('Incorrect token', Response::HTTP_BAD_REQUEST);
+            }
+
+            // Retrieve Stripe Account
+            $stripeAccount = $this->stripeClient->retrieveAccount($accountMapping->getStripeAccountId());
+
+            // Add AccountLink or LoginLink depending on submission status
+
+            $this->logger->info('Onboarding refresh for account: ' . $accountMapping->getStripeAccountId());
+
+            if (!$stripeAccount['details_submitted']) {
+                $this->logger->info('Onboarding refresh - Account not submitted, adding onboarding link.');
+                $url = $this->sellerOnboardingService->addOnboardingLinkToShop(
+                    $accountMapping->getMiraklShopId(),
+                    $accountMapping
+                );
+            } else {
+                $this->logger->info('Onboarding refresh - Account already submitted, adding login link instead.');
+                $url = $this->sellerOnboardingService->addLoginLinkToShop(
+                    $accountMapping->getMiraklShopId(),
+                    $accountMapping
+                );
+            }
+
+            $this->logger->info('Onboarding URL: ' . $url);
+
+            return new RedirectResponse($url);
+
+        } catch (\Throwable $e) {
+            // Log the error with details
+            if ($this->logger) {
+                $this->logger->error('Error in onboardingRefresh: ' . $e->getMessage());
+            }
+
+            // Return generic error to the client
+            return new Response(
+                'An unexpected error occurred. Please try again later.',
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
-
-        // Retrieve AccountMapping
-        $accountMapping = $this->accountMappingRepository->findOneByOnboardingToken($token);
-        if (!$accountMapping) {
-            return new Response('Incorrect token', Response::HTTP_BAD_REQUEST);
-        }
-
-        // Retrieve Stripe Account
-        $stripeAccount = $this->stripeClient->retrieveAccount($accountMapping->getStripeAccountId());
-
-        // Add AccountLink or LoginLink depending on submission status
-        if (!$stripeAccount['details_submitted']) {
-            $url = $this->sellerOnboardingService->addOnboardingLinkToShop($accountMapping->getMiraklShopId(), $accountMapping);
-        } else {
-            $url = $this->sellerOnboardingService->addLoginLinkToShop($accountMapping->getMiraklShopId(), $accountMapping);
-        }
-
-        return new RedirectResponse($url);
     }
 }

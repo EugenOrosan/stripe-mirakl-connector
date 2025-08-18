@@ -170,7 +170,7 @@ class SellerOnboardingService
      * @param $type
      * @return array
      */
-    private function getStripeAccountDetailsFromShop(MiraklShop $shop, $type): array
+    public function getStripeAccountDetailsFromShop(MiraklShop $shop, $type): array
     {
         $details = [];
         if ($this->stripePrefillOnboarding) {
@@ -316,7 +316,9 @@ class SellerOnboardingService
      */
     private function createAccountLink(string $accountId, string $token): string
     {
-        $accountLink = $this->stripeClient->createAccountLink(
+        $this->logger->info('Creating AccountLink for account ID: ' . $accountId . ' with token: ' . $token);
+
+        $accountLink = $this->stripeClient->getSellerPortalLink(
             $accountId,
             $this->router->generate(
                 'onboarding_refresh',
@@ -326,6 +328,8 @@ class SellerOnboardingService
             $this->redirectOnboarding
         );
 
-        return $accountLink['url'] . '';
+        $this->logger->info('AccountLink created with URL: ' . json_encode($accountLink));
+
+        return $accountLink;
     }
 }
