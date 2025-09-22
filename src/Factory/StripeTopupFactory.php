@@ -78,10 +78,10 @@ class StripeTopupFactory implements LoggerAwareInterface
                     continue;
                 }
 
-                if (!$shop_accountMapping->getPayoutEnabled()) {
-                    $this->logger->error('Topup - Payout not enabled for shop, shopId: ' . $shop_accountMapping->getMiraklShopId() . ', continue to next invoice.');
-                    continue;
-                }
+//                if (!$shop_accountMapping->getPayoutEnabled()) {
+//                    $this->logger->error('Topup - Payout not enabled for shop, shopId: ' . $shop_accountMapping->getMiraklShopId() . ', continue to next invoice.');
+//                    continue;
+//                }
 
                 $this->logger->info(
                     'Processing invoice: ' . $invoice['invoice_id'] . ', shopId: ' . $shop_accountMapping->getMiraklShopId() . ', ignored: ' . $shop_accountMapping->getIgnored()
@@ -119,10 +119,10 @@ class StripeTopupFactory implements LoggerAwareInterface
             throw new InvalidArgumentException(sprintf(StripeTopup::TOPUP_STATUS_REASON_SHOP_NOT_READY, $shopId), 20);
         }
 
-        if (!$mapping->getPayoutEnabled()) {
-            $this->logger->error('Topup - Payout not enabled for shop, shopId ' . $shopId);
+        //if (!$mapping->getPayoutEnabled()) {
+            //$this->logger->error('Topup - Payout not enabled for shop, shopId ' . $shopId);
             //throw new InvalidArgumentException(sprintf(StripeTopup::TOPUP_STATUS_REASON_SHOP_TOPUP_DISABLED, $shopId), 20);
-        }
+        //}
 
         $this->logger->info('Topup - Account mapping retrieved successfully, shopId: ' . $shopId);
 
