@@ -201,8 +201,10 @@ class SellerOnboardingService
                         'country' => isset($rawShop['contact_informations']['country']) ? substr($rawShop['contact_informations']['country'], 0, 2) : null
                     ]
                 ],
-                'email' => $rawShop['contact_informations']['email'] ?? null
+                'email' => $rawShop['contact_informations']['email'] ?? null,
+                'country' => isset($rawShop['contact_informations']['country']) ? substr($rawShop['contact_informations']['country'], 0, 2) : null,
             ];
+
             $this->logger->info('Shop Details from Mirakl: ' . json_encode($rawShop));
             $this->logger->info(ucfirst($type) . ' Stripe Account with details: ' . json_encode($details));
 

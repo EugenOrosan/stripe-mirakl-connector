@@ -4,6 +4,7 @@ namespace App\Factory;
 
 use App\Entity\AccountMapping;
 use App\Entity\StripeTopup;
+use App\Entity\StripeTopupInvoiceData;
 use App\Exception\InvalidArgumentException;
 use App\Repository\AccountMappingRepository;
 use App\Service\MiraklClient;
@@ -69,6 +70,8 @@ class StripeTopupFactory implements LoggerAwareInterface
             $amount = 0;
             $this->logger->info('Calculating total amount from invoices, invoiceCount ' . count($invoices));
 
+            $i = 0;
+            $invoiceIds = [];
             foreach ($invoices as $invoice) {
                 $this->logger->info('Start processing invoice: ' . $invoice['invoice_id'] . ', shopId: ' . ($invoice['shop_id'] ?? 0));
                 $shop_accountMapping = $this->getAccountMapping($invoice['shop_id'] ?? 0);
@@ -90,9 +93,16 @@ class StripeTopupFactory implements LoggerAwareInterface
                 $invoiceAmount = $this->getInvoiceAmount($invoice, $mclient);
                 $this->logger->info('Invoice amount calculated, invoiceId: ' . $invoice['invoice_id'] . ', amount: ' . $invoiceAmount);
                 $amount += $invoiceAmount;
+
+                $invoiceIds[$i] = [
+                    'invoice_id' => $invoice['invoice_id'],
+                    'amount' => $invoiceAmount,
+                ];
+                $i++;
             }
 
             $topup->setAmount($amount);
+            $topup->setInvoiceIds($invoiceIds);
         } catch (InvalidArgumentException $e) {
             $this->logger->error('Error during invoice processing, message: ' . $e->getMessage());
             return $this->abortTopup($topup, $e->getMessage());

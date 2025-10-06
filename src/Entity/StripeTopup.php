@@ -87,6 +87,11 @@ class StripeTopup
      */
     private \DateTimeInterface $modificationDatetime;
 
+    /**
+     * @ORM\Column(type="json", nullable=true)]
+     */
+    private ?string $invoiceIds = null;
+
     public static function getAvailableStatus(): array
     {
         return [
@@ -127,7 +132,6 @@ class StripeTopup
     {
         return $this->id;
     }
-
 
     public function getAmount(): ?int
     {
@@ -225,6 +229,17 @@ class StripeTopup
     {
         $this->modificationDatetime = $modificationDatetime;
 
+        return $this;
+    }
+
+    public function getInvoiceIds(): array
+    {
+        return $this->invoiceIds ? json_decode($this->invoiceIds, true) : [];
+    }
+
+    public function setInvoiceIds(array $invoiceIds): self
+    {
+        $this->invoiceIds = json_encode($invoiceIds);
         return $this;
     }
 }
