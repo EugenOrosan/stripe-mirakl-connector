@@ -88,7 +88,7 @@ class SellerOnboardingCommand extends Command implements LoggerAwareInterface
         }
 
         foreach ($shops as $shopId => $shop) {
-            $this->logger->debug("Processing Mirakl Shop: $shopId.");
+            $this->logger->info('Processing Mirakl Shop: ' . $shopId.', lastUpdatedDate: ' . $shop->getLastUpdatedDate());
 
             // Retrieve AccountMappings and create missing Stripe Accounts in the process
             try {
@@ -143,6 +143,8 @@ class SellerOnboardingCommand extends Command implements LoggerAwareInterface
         if (isset($newCheckpoint) && $checkpoint !== $newCheckpoint) {
             $this->configService->setSellerOnboardingCheckpoint($newCheckpoint);
             $this->logger->info("Setting new checkpoint: $newCheckpoint.");
+        } else {
+            $this->logger->info('Checkpoint remains unchanged: ' . ($checkpoint ?: 'null'));
         }
     }
 }
