@@ -144,7 +144,7 @@ class SellerOnboardingCommand extends Command implements LoggerAwareInterface
             $this->configService->setSellerOnboardingCheckpoint($newCheckpoint);
             $this->logger->info("Setting new checkpoint: $newCheckpoint.");
         } else {
-            $this->logger->info('Checkpoint remains unchanged: ' . ($checkpoint ?: 'null'));
+            $this->logger->info('Checkpoint remains unchanged: ' . ($checkpoint ?: 'null') . '. New checkpoint: ' . ($newCheckpoint ?: 'null') . '.');
         }
     }
 }
