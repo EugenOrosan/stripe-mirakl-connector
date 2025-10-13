@@ -142,8 +142,8 @@ class StripeTopupFactory implements LoggerAwareInterface
     private function getInvoiceAmount(array $invoice, MiraklClient $mclient): int
     {
         $amount = $invoice['summary']['amount_transferred'] ?? 0;
-        $transactions = $mclient->getTransactionsForInvoce($invoice['invoice_id']);
         if ($this->enablePaymentTaxSplit) {
+            $transactions = $mclient->getTransactionsForInvoce($invoice['invoice_id']);
             $total_tax = $this->findTotalOrderTax($transactions);
             $amount = $amount - $total_tax;
         }
