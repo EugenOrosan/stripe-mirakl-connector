@@ -178,7 +178,7 @@ services:
 
   App\Command\PaymentTopupCommand:
     calls:
-      - setLogger: [ '@monolog.logger.process_topup' ]
+      - setLogger: ['@monolog.logger.process_topup']
 
   App\Command\SellerMonitorKYCStatusCommand:
     calls:
