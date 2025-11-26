@@ -74,7 +74,12 @@ class StripeTopupFactory implements LoggerAwareInterface
             $invoiceIds = [];
             foreach ($invoices as $invoice) {
                 $this->logger->info('Start processing invoice: ' . $invoice['invoice_id'] . ', shopId: ' . ($invoice['shop_id'] ?? 0));
-                $shop_accountMapping = $this->getAccountMapping($invoice['shop_id'] ?? 0);
+                try {
+                    $shop_accountMapping = $this->getAccountMapping($invoice['shop_id'] ?? 0);
+                }  catch (InvalidArgumentException $e) {
+                    $this->logger->info('Skipping invoice due to account mapping issue: ' . $e->getMessage() . ', invoiceId: ' . $invoice['invoice_id']);
+                    continue;
+                }
 
                 if ($shop_accountMapping->getIgnored()) {
                     $this->logger->info('Shop is ignored, skipping invoice, shopId: ' . $shop_accountMapping->getMiraklShopId());
