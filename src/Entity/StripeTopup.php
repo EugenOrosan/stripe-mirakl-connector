@@ -26,11 +26,11 @@ class StripeTopup
     public const TOPUP_FAILED = 'TOPUP_FAILED';
     public const TOPUP_CREATED = 'TOPUP_CREATED';
 
-    // TOPUP status reasons: on hold
+    // Topup status reasons: on hold
     public const TOPUP_STATUS_REASON_SHOP_NOT_READY = 'Cannot find Stripe account for shop ID %s';
-    public const TOPUP_STATUS_REASON_SHOP_TOPUP_DISABLED = 'TOPUPs are disabled shop ID %s';
+    public const TOPUP_STATUS_REASON_SHOP_TOPUP_DISABLED = 'Topups are disabled shop ID %s';
 
-    // TOPUP status reasons: aborted
+    // Topup status reasons: aborted
     public const TOPUP_STATUS_REASON_INVALID_AMOUNT = 'Amount must be positive, input was: %d';
     public const TOPUP_STATUS_REASON_NO_SHOP_ID = 'No shop ID provided';
 

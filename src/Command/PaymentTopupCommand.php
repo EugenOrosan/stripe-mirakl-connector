@@ -66,7 +66,10 @@ class PaymentTopupCommand extends Command implements LoggerAwareInterface
     {
         $this->logger->info('Topup Job - starting');
 
-        // Now up to 100 new invoices
+        // Process backlog first
+        $this->processBacklog();
+
+        // Then process new invoices
         $this->processNewInvoices();
 
         $this->logger->info('Topup Job - job succeeded');
@@ -74,8 +77,62 @@ class PaymentTopupCommand extends Command implements LoggerAwareInterface
         return 0;
     }
 
+    private function processBacklog(): void
+    {
+        $this->logger->info('Topup Job - Executing backlog');
+
+        $onHoldInvoices = $this->stripeTopupService->getInvoicesOnHold();
+
+        if (empty($onHoldInvoices)) {
+            $this->logger->info('Topup Job - No backlog invoices on hold');
+            return;
+        }
+
+        $this->logger->info('Topup Job - Invoices on hold: ' . count($onHoldInvoices));
+
+        // Get the earliest dateCreatedFromMirakl from onHold invoices
+        $earliestDate = null;
+        foreach ($onHoldInvoices as $invoiceData) {
+            $date = $invoiceData->getDateCreatedFromMirakl();
+            if ($date && (!$earliestDate || $date < $earliestDate)) {
+                $earliestDate = $date;
+            }
+        }
+
+        $this->logger->info('Topup Job - Earliest date from on-hold invoices: ' . ($earliestDate ? $earliestDate->format('Y-m-d H:i:s') : 'none'));
+
+        // Fetch Mirakl invoices from that date
+        $miraklInvoices = $earliestDate
+            ? $this->miraklClient->listInvoicesByDate($earliestDate->format('Y-m-d\TH:i:s\Z'))
+            : $this->miraklClient->listInvoices();
+
+        if (empty($miraklInvoices)) {
+            $this->logger->info('Topup Job - No Mirakl invoices found since earliest date');
+            return;
+        }
+
+        // Build list of invoice numbers from on-hold invoices
+        $onHoldInvoiceNumbers = array_map(fn($i) => $i->getInvoiceNumber(), $onHoldInvoices);
+
+        // Keep only Mirakl invoices that match the on-hold ones
+        $filteredInvoices = array_filter($miraklInvoices, fn($inv) => in_array($inv['invoice_id'], $onHoldInvoiceNumbers));
+
+        if (empty($filteredInvoices)) {
+            $this->logger->info('Topup Job - No matching Mirakl invoices for on-hold invoices');
+            return;
+        }
+
+        $topups = $this->stripeTopupService->createTopupsFromOnHoldInvoices($filteredInvoices, $this->miraklClient);
+
+        $this->dispatchTopups($topups);
+
+        $this->logger->info('Topup Job - Backlog processed');
+    }
+
     private function processNewInvoices(): void
     {
+        $this->logger->info('Topup Job - Executing new invoices');
+
         $checkpoint = $this->configService->getSellerSettlementCheckpoint() ?? '';
         $this->logger->info('Topup Job - Executing for recent invoices, checkpoint: ' . $checkpoint);
         if ($checkpoint) {
@@ -94,6 +151,8 @@ class PaymentTopupCommand extends Command implements LoggerAwareInterface
         $this->dispatchTopups(
             $this->stripeTopupService->getTopupsFromInvoices($invoices, $this->miraklClient)
         );
+
+        $this->logger->info('Topup Job - New invoices processed');
     }
 
     private function dispatchTopups($topups): void

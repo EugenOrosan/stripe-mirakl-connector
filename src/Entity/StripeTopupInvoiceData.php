@@ -10,6 +10,10 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class StripeTopupInvoiceData
 {
+    public const INVOICE_TOPUP_ON_HOLD = 'INVOICE_TOPUP_ON_HOLD';
+    public const INVOICE_TOPUP_PENDING = 'INVOICE_TOPUP_PENDING';
+    public const INVOICE_TOPUP_COMPLETED = 'INVOICE_TOPUP_COMPLETED';
+
     /**
      * @ORM\Id()
      * @ORM\GeneratedValue()
@@ -46,6 +50,21 @@ class StripeTopupInvoiceData
      * @ORM\Column(type="integer", nullable=true)
      */
     private $amount;
+
+    /**
+     * @ORM\Column(type="string", length=50)
+     */
+    private $status;
+
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $statusReason;
+
+    /**
+     * @ORM\Column(type="datetime")
+     */
+    private $dateCreatedFromMirakl;
 
     public function __construct()
     {
@@ -121,6 +140,39 @@ class StripeTopupInvoiceData
     public function setAmount(?int $amount): self
     {
         $this->amount = $amount;
+        return $this;
+    }
+
+    public function getStatus(): ?string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(?string $status): self
+    {
+        $this->status = $status;
+        return $this;
+    }
+
+    public function getStatusReason(): ?string
+    {
+        return $this->statusReason;
+    }
+
+    public function setStatusReason(?string $statusReason): self
+    {
+        $this->statusReason = $statusReason;
+        return $this;
+    }
+
+    public function getDateCreatedFromMirakl(): \DateTimeInterface
+    {
+        return $this->dateCreatedFromMirakl;
+    }
+
+    public function setDateCreatedFromMirakl(\DateTimeInterface $dateCreatedFromMirakl): self
+    {
+        $this->dateCreatedFromMirakl = $dateCreatedFromMirakl;
         return $this;
     }
 }

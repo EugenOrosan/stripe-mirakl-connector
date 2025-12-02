@@ -3,10 +3,12 @@
 namespace App\Service;
 
 use App\Entity\StripePayout;
+use App\Entity\StripeTopup;
 use App\Entity\StripeTransfer;
 use App\Factory\StripePayoutFactory;
 use App\Factory\StripeTransferFactory;
 use App\Repository\StripePayoutRepository;
+use App\Repository\StripeTopupRepository;
 use App\Repository\StripeTransferRepository;
 
 class SellerSettlementService
@@ -31,16 +33,23 @@ class SellerSettlementService
      */
     private $stripeTransferRepository;
 
+    /**
+     * @var StripeTopupRepository
+     */
+    private $stripeTopupRepository;
+
     public function __construct(
         StripePayoutFactory $stripePayoutFactory,
         StripeTransferFactory $stripeTransferFactory,
         StripePayoutRepository $stripePayoutRepository,
-        StripeTransferRepository $stripeTransferRepository
+        StripeTransferRepository $stripeTransferRepository,
+        StripeTopupRepository $stripeTopupRepository
     ) {
         $this->stripePayoutFactory = $stripePayoutFactory;
         $this->stripeTransferFactory = $stripeTransferFactory;
         $this->stripePayoutRepository = $stripePayoutRepository;
         $this->stripeTransferRepository = $stripeTransferRepository;
+        $this->stripeTopupRepository = $stripeTopupRepository;
     }
 
     /**
@@ -97,8 +106,7 @@ class SellerSettlementService
     public function createTransfersFromInvoices(array $invoices): array
     {
         // Retrieve existing StripeTransfers with provided invoice IDs
-        $existingTransfers = $this->stripeTransferRepository
-            ->findTransfersByInvoiceIds(array_keys($invoices));
+        $existingTransfers = $this->stripeTransferRepository->findTransfersByInvoiceIds(array_keys($invoices));
         $type = StripeTransfer::TRANSFER_INVOICE;
         $transfersByInvoiceId = [];
         foreach ($invoices as $invoice) {
@@ -108,8 +116,15 @@ class SellerSettlementService
             }
             
             // Create new transfer
-            $transfer = $this->stripeTransferFactory
-            ->createFromInvoiceTransfer($invoice, $type);
+            if (!$this->isInvoiceInLastTopup($invoiceId)) {
+                $transfer = $this->stripeTransferFactory->createFromInvoiceTransfer($invoice, $type);
+                $transfer->setStatus(StripeTransfer::TRANSFER_ON_HOLD);
+                $transfer->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+                $this->stripeTransferRepository->persist($transfer);
+                continue;
+            }
+
+            $transfer = $this->stripeTransferFactory->createFromInvoiceTransfer($invoice, $type);
             $this->stripeTransferRepository->persist($transfer);
 
             $transfersByInvoiceId[$invoiceId][$type] = $transfer;
@@ -138,6 +153,11 @@ class SellerSettlementService
                     $invoices[(int) $invoiceId],
                     $type
                 );
+
+                if (!$this->isInvoiceInLastTopup($invoiceId)) {
+                    $updated[$invoiceId][$type]->setStatus(StripeTransfer::TRANSFER_ON_HOLD);
+                    $updated[$invoiceId][$type]->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+                }
             }
         }
 
@@ -173,13 +193,25 @@ class SellerSettlementService
                     continue;
                 }
 
+                if (!$this->isInvoiceInLastTopup($invoiceId)) {
+                    $payout->setStatus(StripePayout::PAYOUT_ON_HOLD);
+                    $payout->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+                    continue;
+                }
+
                 // Use existing payout
-                $payout = $this->stripePayoutFactory
-                ->updateFromInvoice($payout, $invoice, $mclient);
+                $payout = $this->stripePayoutFactory->updateFromInvoice($payout, $invoice, $mclient);
             } else {
+                if (!$this->isInvoiceInLastTopup($invoiceId)) {
+                    $payout = $this->stripePayoutFactory->createFromInvoice($invoice, $mclient);
+                    $payout->setStatus(StripePayout::PAYOUT_ON_HOLD);
+                    $payout->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+                    $this->stripePayoutRepository->persist($payout);
+                    continue;
+                }
+
                 // Create new payout
-                $payout = $this->stripePayoutFactory
-                ->createFromInvoice($invoice, $mclient);
+                $payout = $this->stripePayoutFactory->createFromInvoice($invoice, $mclient);
                 $this->stripePayoutRepository->persist($payout);
             }
 
@@ -204,11 +236,35 @@ class SellerSettlementService
                 $invoices[$invoiceId],
                 $mclient
             );
+
+            if (!$this->isInvoiceInLastTopup($invoiceId)) {
+                $updated[$invoiceId]->setStatus(StripePayout::PAYOUT_ON_HOLD);
+                $updated[$invoiceId]->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+            }
         }
 
         // Save
-        $this->stripeTransferRepository->flush();
+        $this->stripePayoutRepository->flush();
 
         return $updated;
+    }
+
+    private function isInvoiceInLastTopup(int $invoiceId): bool
+    {
+        $topup = $this->stripeTopupRepository->findOneBy(
+            ['status' => StripeTopup::TOPUP_CREATED],
+            ['id' => 'DESC']
+        );
+
+        if (!$topup) {
+            return false;
+        }
+
+        $invoiceIds = array_map(
+            fn($item) => (int) $item['invoice_id'],
+            $topup->getInvoiceIds()
+        );
+
+        return in_array($invoiceId, $invoiceIds);
     }
 }

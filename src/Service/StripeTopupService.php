@@ -2,7 +2,10 @@
 
 namespace App\Service;
 
+use App\Entity\StripeTopup;
+use App\Entity\StripeTopupInvoiceData;
 use App\Factory\StripeTopupFactory;
+use App\Repository\StripeTopupInvoiceDataRepository;
 use App\Repository\StripeTopupRepository;
 
 class StripeTopupService
@@ -18,15 +21,23 @@ class StripeTopupService
     private $stripeTopupRepository;
 
     /**
+     * @var StripeTopupInvoiceDataRepository
+     */
+    private $stripeTopupInvoiceDataRepository;
+
+    /**
      * @param StripeTopupFactory $stripeTopupFactory
      * @param StripeTopupRepository $stripeTopupRepository
+     * @param StripeTopupInvoiceDataRepository $stripeTopupInvoiceDataRepository
      */
     public function __construct(
         StripeTopupFactory $stripeTopupFactory,
         StripeTopupRepository $stripeTopupRepository,
+        StripeTopupInvoiceDataRepository $stripeTopupInvoiceDataRepository
     ) {
         $this->stripeTopupFactory = $stripeTopupFactory;
         $this->stripeTopupRepository = $stripeTopupRepository;
+        $this->stripeTopupInvoiceDataRepository = $stripeTopupInvoiceDataRepository;
     }
 
     /**
@@ -41,8 +52,34 @@ class StripeTopupService
 
         foreach ($topups as $topup) {
             $this->stripeTopupRepository->persist($topup);
-            $this->stripeTopupRepository->flush();
         }
+        $this->stripeTopupRepository->flush();
+
+        return $topups;
+    }
+
+    public function getTopupsOnHold(): array
+    {
+        return $this->stripeTopupRepository->findBy([
+            'status' => StripeTopup::TOPUP_ON_HOLD
+        ]);
+    }
+
+    public function getInvoicesOnHold(): array
+    {
+        return $this->stripeTopupInvoiceDataRepository->findBy([
+            'status' => StripeTopupInvoiceData::INVOICE_TOPUP_ON_HOLD
+        ]);
+    }
+
+    public function createTopupsFromOnHoldInvoices(array $invoices, MiraklClient $mclient): array
+    {
+        $topups = $this->stripeTopupFactory->createFromInvoices($invoices, $mclient);
+
+        foreach ($topups as $topup) {
+            $this->stripeTopupRepository->persist($topup);
+        }
+        $this->stripeTopupRepository->flush();
 
         return $topups;
     }

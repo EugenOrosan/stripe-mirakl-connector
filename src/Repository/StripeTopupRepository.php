@@ -23,6 +23,11 @@ class StripeTopupRepository extends ServiceEntityRepository
         parent::__construct($registry, StripeTopup::class);
     }
 
+    public function remove(StripeTopup $stripeTopup): void
+    {
+        $this->getEntityManager()->remove($stripeTopup);
+    }
+
     public function persistAndFlush(StripeTopup $stripeTopup): StripeTopup
     {
         $this->getEntityManager()->persist($stripeTopup);

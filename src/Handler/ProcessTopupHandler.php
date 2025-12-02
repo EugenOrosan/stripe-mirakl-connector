@@ -69,16 +69,23 @@ class ProcessTopupHandler implements MessageHandlerInterface, LoggerAwareInterfa
 
             if ($topup->getInvoiceIds()) {
                 foreach ($topup->getInvoiceIds() as $invoiceItem) {
-                    $invoiceData = new StripeTopupInvoiceData();
-                    $invoiceData->setInvoiceNumber($invoiceItem['invoice_id']);
-                    $invoiceData->setAmount($invoiceItem['amount']);
-                    $invoiceData->setTopupInternalId($topup->getId());
-                    $invoiceData->setTopupStripeId($response->id);
-                    $invoiceData->setCreatedAt(new \DateTimeImmutable());
+                    $invoiceData = $this->stripeTopupInvoiceDataRepository->findOneBy(['invoiceNumber' => $invoiceItem['invoice_id']]);
+                    if (!$invoiceData) {
+                        $invoiceData = new StripeTopupInvoiceData();
+                        $invoiceData->setInvoiceNumber($invoiceItem['invoice_id']);
+                        $invoiceData->setAmount($invoiceItem['amount']);
+                        $invoiceData->setTopupInternalId($topup->getId());
+                        $invoiceData->setTopupStripeId($response->id);
+                        $invoiceData->setCreatedAt(new \DateTimeImmutable());
+                        $invoiceData->setDateCreatedFromMirakl(new \DateTimeImmutable($invoiceItem['date_created']));
+                    }
                     $invoiceData->setUpdatedAt(new \DateTimeImmutable());
+                    $invoiceData->setStatus(StripeTopupInvoiceData::INVOICE_TOPUP_COMPLETED);
+                    $invoiceData->setStatusReason(null);
 
                     $this->stripeTopupInvoiceDataRepository->persist($invoiceData);
                 }
+
                 $this->stripeTopupInvoiceDataRepository->flush();
             }
         } catch (ApiErrorException $e) {
