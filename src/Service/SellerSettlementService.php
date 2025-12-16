@@ -116,7 +116,7 @@ class SellerSettlementService
             }
             
             // Create new transfer
-            if (!$this->isInvoiceInLastTopup($invoiceId)) {
+            if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                 $transfer = $this->stripeTransferFactory->createFromInvoiceTransfer($invoice, $type);
                 $transfer->setStatus(StripeTransfer::TRANSFER_ON_HOLD);
                 $transfer->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
@@ -154,7 +154,7 @@ class SellerSettlementService
                     $type
                 );
 
-                if (!$this->isInvoiceInLastTopup($invoiceId)) {
+                if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                     $updated[$invoiceId][$type]->setStatus(StripeTransfer::TRANSFER_ON_HOLD);
                     $updated[$invoiceId][$type]->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
                 }
@@ -193,7 +193,7 @@ class SellerSettlementService
                     continue;
                 }
 
-                if (!$this->isInvoiceInLastTopup($invoiceId)) {
+                if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                     $payout->setStatus(StripePayout::PAYOUT_ON_HOLD);
                     $payout->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
                     continue;
@@ -202,7 +202,7 @@ class SellerSettlementService
                 // Use existing payout
                 $payout = $this->stripePayoutFactory->updateFromInvoice($payout, $invoice, $mclient);
             } else {
-                if (!$this->isInvoiceInLastTopup($invoiceId)) {
+                if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                     $payout = $this->stripePayoutFactory->createFromInvoice($invoice, $mclient);
                     $payout->setStatus(StripePayout::PAYOUT_ON_HOLD);
                     $payout->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
@@ -237,7 +237,7 @@ class SellerSettlementService
                 $mclient
             );
 
-            if (!$this->isInvoiceInLastTopup($invoiceId)) {
+            if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                 $updated[$invoiceId]->setStatus(StripePayout::PAYOUT_ON_HOLD);
                 $updated[$invoiceId]->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
             }
@@ -261,10 +261,30 @@ class SellerSettlementService
         }
 
         $invoiceIds = array_map(
-            fn($item) => (int) $item['invoice_id'],
+            fn($item) => (int)$item['invoice_id'],
             $topup->getInvoiceIds()
         );
 
         return in_array($invoiceId, $invoiceIds);
+    }
+
+    private function isInvoiceInAnyCreatedTopup(int $invoiceId): bool
+    {
+        $topups = $this->stripeTopupRepository->findBy([
+            'status' => StripeTopup::TOPUP_CREATED,
+        ]);
+
+        foreach ($topups as $topup) {
+            $invoiceIds = array_map(
+                static fn($item) => (int)$item['invoice_id'],
+                $topup->getInvoiceIds()
+            );
+
+            if (in_array($invoiceId, $invoiceIds, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
