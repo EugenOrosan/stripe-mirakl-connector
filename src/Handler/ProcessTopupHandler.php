@@ -81,6 +81,8 @@ class ProcessTopupHandler implements MessageHandlerInterface, LoggerAwareInterfa
                     }
                     $invoiceData->setUpdatedAt(new \DateTimeImmutable());
                     $invoiceData->setStatus(StripeTopupInvoiceData::INVOICE_TOPUP_COMPLETED);
+                    $invoiceData->setTopupInternalId($topup->getId());
+                    $invoiceData->setTopupStripeId($response->id);
                     $invoiceData->setStatusReason(null);
 
                     $this->stripeTopupInvoiceDataRepository->persist($invoiceData);
