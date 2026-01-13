@@ -15,6 +15,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DelayStamp;
 
 class SellerSettlementCommand extends Command implements LoggerAwareInterface
 {
@@ -201,7 +202,7 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
             if ($payout->isDispatchable()) {
                 $this->bus->dispatch(new ProcessPayoutMessage(
                     $payout->getId()
-                ));
+                ), [new DelayStamp(144 * 60 * 60 * 1000)]);
             }
         }
     }
