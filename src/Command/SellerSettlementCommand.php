@@ -202,7 +202,7 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
             if ($payout->isDispatchable()) {
                 $this->bus->dispatch(new ProcessPayoutMessage(
                     $payout->getId()
-                ), [new DelayStamp(144 * 60 * 60 * 1000)]);
+                ), [new DelayStamp(72 * 60 * 60 * 1000)]);
             }
         }
     }
