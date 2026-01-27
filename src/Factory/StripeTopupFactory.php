@@ -98,19 +98,21 @@ class StripeTopupFactory implements LoggerAwareInterface
                     continue;
                 }
 
+                // Check if shop is ignored and use NON_APPLICABLE status to skip invoice and never pick it up again
                 if ($shop_accountMapping->getIgnored()) {
-                    $reason = 'Shop is ignored, skipping invoice, shopId: ' . $shop_accountMapping->getMiraklShopId();
+                    $reason = 'Shop is ignored, skipping invoice, shopId: ' . $shop_accountMapping->getMiraklShopId() . ', invoiceId: ' . ($invoice['invoice_id'] ?? 'N/A');
                     $this->logger->info($reason);
-                    $onHoldInvoices[] = $this->createInvoiceDataEntity($invoice, 0, StripeTopupInvoiceData::INVOICE_TOPUP_ON_HOLD, $reason, $mclient);
+                    $onHoldInvoices[] = $this->createInvoiceDataEntity($invoice, 0, StripeTopupInvoiceData::INVOICE_TOPUP_NON_APPLICABLE, $reason, $mclient);
                     continue;
                 }
 
-                if (!$shop_accountMapping->getPayoutEnabled()) {
-                    $reason = 'Topup - Payout not enabled for shop, shopId: ' . $shop_accountMapping->getMiraklShopId() . ', continue to next invoice.';
-                    $this->logger->error($reason);
-                    $onHoldInvoices[] = $this->createInvoiceDataEntity($invoice, 0, StripeTopupInvoiceData::INVOICE_TOPUP_ON_HOLD, $reason, $mclient);
-                    continue;
-                }
+                // 2026-01-26 change - if payout is not enabled, do not skip invoice and add it to topup
+                // if (!$shop_accountMapping->getPayoutEnabled()) {
+                    // $reason = 'Topup - Payout not enabled for shop, shopId: ' . $shop_accountMapping->getMiraklShopId() . ', continue to next invoice.';
+                    // $this->logger->error($reason);
+                    // $onHoldInvoices[] = $this->createInvoiceDataEntity($invoice, 0, StripeTopupInvoiceData::INVOICE_TOPUP_ON_HOLD, $reason, $mclient);
+                    // continue;
+                // }
 
                 $this->logger->info(
                     'Processing invoice: ' . $invoice['invoice_id'] . ', shopId: ' . $shop_accountMapping->getMiraklShopId()
@@ -129,6 +131,8 @@ class StripeTopupFactory implements LoggerAwareInterface
                 $this->createInvoiceDataEntity($invoice, $amount, StripeTopupInvoiceData::INVOICE_TOPUP_PENDING, null, $mclient);
 
                 $i++;
+
+                $this->logger->info('Finished processing invoice: ' . $invoice['invoice_id']);
             }
 
             if (!empty($onHoldInvoices)) {

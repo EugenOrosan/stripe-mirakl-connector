@@ -165,7 +165,7 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
 
         $checkpoint = $this->updateCheckpoint($invoices, $checkpoint);
         $this->configService->setSellerSettlementCheckpoint($checkpoint);
-        $this->logger->info('Setting new checkpoint: '.$checkpoint);
+        $this->logger->info('Setting new checkpoint: ' . $checkpoint);
     }
 
     // Return the last valid date_created or the current checkpoint

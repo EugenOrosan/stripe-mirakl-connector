@@ -119,7 +119,7 @@ class SellerSettlementService
             if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                 $transfer = $this->stripeTransferFactory->createFromInvoiceTransfer($invoice, $type);
                 $transfer->setStatus(StripeTransfer::TRANSFER_ON_HOLD);
-                $transfer->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+                $transfer->setStatusReason("Invoice " . $invoiceId . " was not part in any created Topup");
                 $this->stripeTransferRepository->persist($transfer);
                 continue;
             }
@@ -156,7 +156,7 @@ class SellerSettlementService
 
                 if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                     $updated[$invoiceId][$type]->setStatus(StripeTransfer::TRANSFER_ON_HOLD);
-                    $updated[$invoiceId][$type]->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+                    $updated[$invoiceId][$type]->setStatusReason("Invoice " . $invoiceId . " was not part in any created Topup");
                 }
             }
         }
@@ -195,7 +195,7 @@ class SellerSettlementService
 
                 if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                     $payout->setStatus(StripePayout::PAYOUT_ON_HOLD);
-                    $payout->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+                    $payout->setStatusReason("Invoice " . $invoiceId . " was not part in any created Topup");
                     continue;
                 }
 
@@ -205,7 +205,7 @@ class SellerSettlementService
                 if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                     $payout = $this->stripePayoutFactory->createFromInvoice($invoice, $mclient);
                     $payout->setStatus(StripePayout::PAYOUT_ON_HOLD);
-                    $payout->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+                    $payout->setStatusReason("Invoice " . $invoiceId . " was not part in any created Topup");
                     $this->stripePayoutRepository->persist($payout);
                     continue;
                 }
@@ -239,7 +239,7 @@ class SellerSettlementService
 
             if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
                 $updated[$invoiceId]->setStatus(StripePayout::PAYOUT_ON_HOLD);
-                $updated[$invoiceId]->setStatusReason("Invoice " . $invoiceId . " was not part of last Topup");
+                $updated[$invoiceId]->setStatusReason("Invoice " . $invoiceId . " was not part in any created Topup");
             }
         }
 

@@ -11,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 class StripeTopupInvoiceData
 {
     public const INVOICE_TOPUP_ON_HOLD = 'INVOICE_TOPUP_ON_HOLD';
+    public const INVOICE_TOPUP_NON_APPLICABLE = 'INVOICE_TOPUP_NON_APPLICABLE';
     public const INVOICE_TOPUP_PENDING = 'INVOICE_TOPUP_PENDING';
     public const INVOICE_TOPUP_COMPLETED = 'INVOICE_TOPUP_COMPLETED';
 

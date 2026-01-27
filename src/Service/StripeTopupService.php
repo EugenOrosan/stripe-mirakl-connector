@@ -47,8 +47,22 @@ class StripeTopupService
      */
     public function getTopupsFromInvoices(array $invoices, MiraklClient $mclient): array
     {
+        // Filter out invoices that already have a completed topup
+        $filteredInvoices = [];
+        foreach ($invoices as $invoice) {
+            $existingInvoice = $this->stripeTopupInvoiceDataRepository->findOneBy([
+                'invoiceNumber' => $invoice['invoice_number'],
+                'status' => StripeTopupInvoiceData::INVOICE_TOPUP_COMPLETED
+            ]);
+
+            if (!$existingInvoice) {
+                // Only process invoices that DO NOT have a completed topup
+                $filteredInvoices[] = $invoice;
+            }
+        }
+
         // Retrieve existing topups based on invoices
-        $topups = $this->stripeTopupFactory->createFromInvoices($invoices, $mclient);
+        $topups = $this->stripeTopupFactory->createFromInvoices($filteredInvoices, $mclient);
 
         foreach ($topups as $topup) {
             $this->stripeTopupRepository->persist($topup);
