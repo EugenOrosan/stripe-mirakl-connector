@@ -51,7 +51,7 @@ class StripeTopupService
         $filteredInvoices = [];
         foreach ($invoices as $invoice) {
             $existingInvoice = $this->stripeTopupInvoiceDataRepository->findOneBy([
-                'invoiceNumber' => $invoice['invoice_number'],
+                'invoiceNumber' => $invoice['invoice_id'],
                 'status' => StripeTopupInvoiceData::INVOICE_TOPUP_COMPLETED
             ]);
 
