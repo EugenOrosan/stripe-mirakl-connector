@@ -118,4 +118,20 @@ class StripeTransferRepository extends ServiceEntityRepository
             'miraklId' => $invoiceIds,
         ]));
     }
+
+    public function findCommissionTaxTransfersByInvoiceIds(array $invoiceIds): array
+    {
+        return $this->mapTransfersByMiraklIdAndType($this->findBy([
+            'type' => StripeTransfer::getCommissionTaxInvoiceType(),
+            'miraklId' => $invoiceIds,
+        ]));
+    }
+
+    public function findRetriableCommissionTaxInvoiceTransfers(): array
+    {
+        return $this->mapTransfersByMiraklIdAndType($this->findBy([
+            'type' => StripeTransfer::getCommissionTaxInvoiceType(),
+            'status' => StripeTransfer::getCommissionTaxRetriableStatus(),
+        ]));
+    }
 }

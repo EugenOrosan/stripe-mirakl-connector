@@ -434,6 +434,43 @@ class StripeTransferFactory implements LoggerAwareInterface
         return $transfer->setStatus(StripeTransfer::TRANSFER_PENDING);
     }
 
+    public function createFromCommissionTaxInvoiceTransfer(array $invoice, string $type): StripeTransfer
+    {
+        $transfer = new StripeTransfer();
+        $transfer->setType($type);
+        $transfer->setMiraklId($invoice['invoice_id']);
+
+        try {
+            $transfer->setMiraklCreatedDate(
+                MiraklClient::getDatetimeFromString($invoice['date_created'])
+            );
+        } catch (InvalidArgumentException $e) {
+            // Shouldn't happen, see MiraklClient::getDatetimeFromString
+            return $this->abortTransfer($transfer, $e->getMessage());
+        }
+
+        return $this->updateFromCommissionTaxInvoice($transfer, $invoice, $type);
+    }
+
+    public function updateFromCommissionTaxInvoice(StripeTransfer $transfer, array $invoice, string $type): StripeTransfer
+    {
+        // Transfer already created
+        if ($transfer->getTransferId()) {
+            return $this->markTransferAsCreated($transfer);
+        }
+
+        // Amount and currency
+        try {
+            $transfer->setAmount($this->getCommissionTaxInvoiceAmount($invoice, $type));
+            $transfer->setCurrency(strtolower($invoice['currency_iso_code']));
+        } catch (InvalidArgumentException $e) {
+            return $this->abortTransfer($transfer, $e->getMessage());
+        }
+
+        // All good
+        return $transfer->setStatus(StripeTransfer::TRANSFER_PENDING);
+    }
+
     public function updateFromInvoiceTransfer(StripeTransfer $transfer, array $invoice, string $type): StripeTransfer
     {
         // Transfer already created
@@ -564,6 +601,21 @@ class StripeTransferFactory implements LoggerAwareInterface
 
         $amount = $invoice['summary'][$typeToKey[$type]] ?? 0;
         $amount = abs(gmp_intval((string) ($amount * 100)));
+        if ($amount <= 0) {
+            throw new InvalidArgumentException(sprintf(StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT, $amount));
+        }
+
+        return $amount;
+    }
+
+    private function getCommissionTaxInvoiceAmount(array $invoice, string $type): int
+    {
+        $totalPayableOrdersInclTax = $invoice['summary']['total_payable_orders_incl_tax'] ?? 0;
+        $totalRefundOrdersInclTax = $invoice['summary']['total_refund_orders_incl_tax'] ?? 0;
+        $amountTransferred = $invoice['summary']['amount_transferred'] ?? 0;
+
+        $amountCalculated = $totalPayableOrdersInclTax + $totalRefundOrdersInclTax - $amountTransferred;
+        $amount = abs(gmp_intval((string) ($amountCalculated * 100)));
         if ($amount <= 0) {
             throw new InvalidArgumentException(sprintf(StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT, $amount));
         }

@@ -63,6 +63,14 @@ class SellerSettlementService
     /**
      * @return array [ invoice_id => StripeTransfer[] ]
      */
+    public function getRetriableCommissionTaxTransfers(): array
+    {
+        return $this->stripeTransferRepository->findRetriableCommissionTaxInvoiceTransfers();
+    }
+
+    /**
+     * @return array [ invoice_id => StripeTransfer[] ]
+     */
     public function getTransfersFromInvoices(array $invoices): array
     {
         // Retrieve existing StripeTransfers with provided invoice IDs
@@ -286,5 +294,69 @@ class SellerSettlementService
         }
 
         return false;
+    }
+
+    public function createCommissionTaxTransfersFromInvoices(array $invoices): array
+    {
+        // Retrieve existing StripeTransfers with provided invoice IDs for Commission Tax Invoices
+        $existingTransfers = $this->stripeTransferRepository->findCommissionTaxTransfersByInvoiceIds(array_keys($invoices));
+        $type = StripeTransfer::TRANSFER_COMMISSION_TAX;
+        $transfersByInvoiceId = [];
+        foreach ($invoices as $invoice) {
+            $invoiceId = $invoice['invoice_id'];
+            if (isset($existingTransfers[$invoiceId][$type])) {
+                continue;
+            }
+
+            // Create new transfer
+            if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
+                $transfer = $this->stripeTransferFactory->createFromCommissionTaxInvoiceTransfer($invoice, $type);
+                $transfer->setStatus(StripeTransfer::TRANSFER_COMMISSION_TAX_ON_HOLD);
+                $transfer->setStatusReason("Invoice " . $invoiceId . " was not part in any created Topup");
+                $this->stripeTransferRepository->persist($transfer);
+                continue;
+            }
+
+            $transfer = $this->stripeTransferFactory->createFromCommissionTaxInvoiceTransfer($invoice, $type);
+            $this->stripeTransferRepository->persist($transfer);
+
+            $transfersByInvoiceId[$invoiceId][$type] = $transfer;
+        }
+
+        // Save
+        $this->stripeTransferRepository->flush();
+
+        return $transfersByInvoiceId;
+    }
+
+    /**
+     * @return array [ invoice_id => StripeTransfer[] ]
+     */
+    public function updateCommissionTaxTransfersFromInvoices(array $existingTransfers, array $invoices)
+    {
+        $updated = [];
+        foreach ($existingTransfers as $invoiceId => $transfers) {
+            foreach ($transfers as $type => $transfer) {
+                if (!isset($updated[$invoiceId])) {
+                    $updated[$invoiceId] = [];
+                }
+
+                $updated[$invoiceId][$type] = $this->stripeTransferFactory->updateFromCommissionTaxInvoice(
+                    $transfer,
+                    $invoices[(int) $invoiceId],
+                    $type
+                );
+
+                if (!$this->isInvoiceInAnyCreatedTopup($invoiceId)) {
+                    $updated[$invoiceId][$type]->setStatus(StripeTransfer::TRANSFER_COMMISSION_TAX_ON_HOLD);
+                    $updated[$invoiceId][$type]->setStatusReason("Invoice " . $invoiceId . " was not part in any created Topup");
+                }
+            }
+        }
+
+        // Save
+        $this->stripeTransferRepository->flush();
+
+        return $updated;
     }
 }

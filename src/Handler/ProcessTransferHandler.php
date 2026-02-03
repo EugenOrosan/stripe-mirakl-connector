@@ -32,14 +32,27 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
      */
     private $miraklClient;
 
+    /**
+     * @var string
+     */
+    private $commissionTaxFromInvoicesStripeAccount;
+
+    /**
+     * @param StripeClient $stripeClient
+     * @param StripeTransferRepository $stripeTransferRepository
+     * @param MiraklClient $miraklClient
+     * @param $commissionTaxFromInvoicesStripeAccount
+     */
     public function __construct(
         StripeClient $stripeClient,
         StripeTransferRepository $stripeTransferRepository,
-        MiraklClient $miraklClient
+        MiraklClient $miraklClient,
+        $commissionTaxFromInvoicesStripeAccount
     ) {
         $this->stripeClient = $stripeClient;
         $this->stripeTransferRepository = $stripeTransferRepository;
         $this->miraklClient = $miraklClient;
+        $this->commissionTaxFromInvoicesStripeAccount = $commissionTaxFromInvoicesStripeAccount;
     }
 
     public function __invoke(ProcessTransferMessage $message): void
@@ -83,6 +96,14 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
                         $metadata
                     );
                     break;
+                case StripeTransfer::TRANSFER_COMMISSION_TAX:
+                    $response = $this->stripeClient->createTransfer(
+                        $currency,
+                        $amount,
+                        $this->commissionTaxFromInvoicesStripeAccount,
+                        $transfer->getTransactionId(),
+                        []
+                    );
             }
 
             if (isset($response->id)) {
@@ -105,7 +126,11 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
                 'trace' => $e->getTraceAsString() ?? 'No trace available.',
             ]);
 
-            $transfer->setStatus(StripeTransfer::TRANSFER_FAILED);
+            if ($type == StripeTransfer::TRANSFER_COMMISSION_TAX) {
+                $transfer->setStatus(StripeTransfer::TRANSFER_COMMISSION_TAX_FAILED);
+            } else {
+                $transfer->setStatus(StripeTransfer::TRANSFER_FAILED);
+            }
             $transfer->setStatusReason(substr($e->getMessage(), 0, 1024));
         }
 
