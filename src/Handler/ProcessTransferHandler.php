@@ -113,14 +113,20 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
             }
         } catch (ApiErrorException $e) {
             $message = sprintf('Could not create Stripe Transfer: %s.', $e->getMessage());
+
+            $accountMapping = $transfer->getAccountMapping();
+            $miraklShopId = $accountMapping
+                ? $accountMapping->getMiraklShopId()
+                : 'No shop id available.';
+
             $this->logger->error($message, [
                 'miraklId' => $transfer->getMiraklId(),
                 'transferId' => $transfer->getTransferId(),
                 'transactionId' => $transfer->getTransactionId(),
                 'amount' => $transfer->getAmount(),
                 'stripeErrorCode' => $e->getStripeCode(),
-                'miraklShopId' => $transfer->getAccountMapping()->getMiraklShopId() ?? 'No shop id available.',
-                'accountMapping' => json_encode($transfer->getAccountMapping() ?? []),
+                'miraklShopId' => $miraklShopId,
+                'accountMapping' => $accountMapping ? json_encode($accountMapping) : null,
                 'file' => $e->getFile() ??  'No file available.',
                 'line' => $e->getLine() ?? 'No line available.',
                 'trace' => $e->getTraceAsString() ?? 'No trace available.',
