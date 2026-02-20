@@ -42,7 +42,7 @@ parameters:
   app.stripe.prefill_onboarding: "%env(bool:STRIPE_PREFILL_ONBOARDING)%"
   app.stripe.tax_account: "%env(STRIPE_TAX_ACCOUNT)%"
   app.stripe.stripe_account_metadata: "%env(STRIPE_ACCOUNT_METADATA)%"
-  app.stripe.enable_commission_tax_from_invoices: "%env(ENABLE_COMMISSION_TAX_FROM_INVOICES)%"
+  app.stripe.enable_commission_tax_from_invoices: "%env(bool:ENABLE_COMMISSION_TAX_FROM_INVOICES)%"
   app.stripe.commission_tax_from_invoices_stripe_account: "%env(COMMISSION_TAX_FROM_INVOICES_STRIPE_ACCOUNT)%"
   app.workflow.enable_product_payment_split: "%env(default:deprecated_enable_product_payment_split:bool:ENABLE_PRODUCT_PAYMENT_SPLIT)%"
   app.workflow.enable_service_payment_split: "%env(bool:ENABLE_SERVICE_PAYMENT_SPLIT)%"

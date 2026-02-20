@@ -112,6 +112,7 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
     {
         $this->logger->info('Executing backlog for retriable transfers and payouts');
 
+        $this->logger->info('Process backlog - Variable enableCommissionTaxFromInvoices enabled: ' . ($this->enableCommissionTaxFromInvoices ? 'yes' : 'no'));
         if ($this->enableCommissionTaxFromInvoices) {
             $this->logger->info('Processing retriable commission and tax transfers');
             $retriableCommissionTaxTransfers = $this->sellerSettlementService->getRetriableCommissionTaxTransfers();
@@ -190,6 +191,7 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
             return;
         }
 
+        $this->logger->info('Process new invoices - Variable enableCommissionTaxFromInvoices enabled: ' . ($this->enableCommissionTaxFromInvoices ? 'yes' : 'no'));
         if ($this->enableCommissionTaxFromInvoices) {
             $this->logger->info('Processing commission and tax transfers from invoices');
             $this->dispatchTransfers(
