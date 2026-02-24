@@ -21,10 +21,12 @@ use Gedmo\Mapping\Annotation as Gedmo;
 class StripePayout
 {
     public const PAYOUT_ON_HOLD = 'PAYOUT_ON_HOLD';
+    public const PAYOUT_ON_KYC_HOLD = 'PAYOUT_ON_KYC_HOLD';
     public const PAYOUT_ABORTED = 'PAYOUT_ABORTED';
     public const PAYOUT_PENDING = 'PAYOUT_PENDING';
     public const PAYOUT_FAILED = 'PAYOUT_FAILED';
     public const PAYOUT_CREATED = 'PAYOUT_CREATED';
+    public const PAYOUT_IGNORED = 'PAYOUT_IGNORED';
 
     // Payout status reasons: on hold
     public const PAYOUT_STATUS_REASON_SHOP_NOT_READY = 'Cannot find Stripe account for shop ID %s';
@@ -101,10 +103,12 @@ class StripePayout
     {
         return [
             self::PAYOUT_ON_HOLD,
+            self::PAYOUT_ON_KYC_HOLD,
             self::PAYOUT_ABORTED,
             self::PAYOUT_PENDING,
             self::PAYOUT_FAILED,
             self::PAYOUT_CREATED,
+            self::PAYOUT_IGNORED
         ];
     }
 
@@ -120,6 +124,7 @@ class StripePayout
         return [
             self::PAYOUT_FAILED,
             self::PAYOUT_ON_HOLD,
+            self::PAYOUT_ON_KYC_HOLD
         ];
     }
 
