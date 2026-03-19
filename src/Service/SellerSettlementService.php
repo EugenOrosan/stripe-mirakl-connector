@@ -54,6 +54,14 @@ class SellerSettlementService
     /**
      * @return array [ invoice_id => StripeTransfer[] ]
      */
+    public function getRetriableCommissionTaxTransfers(): array
+    {
+        return $this->stripeTransferRepository->findRetriableCommissionTaxInvoiceTransfers();
+    }
+
+    /**
+     * @return array [ invoice_id => StripeTransfer[] ]
+     */
     public function getTransfersFromInvoices(array $invoices): array
     {
         // Retrieve existing StripeTransfers with provided invoice IDs
@@ -97,8 +105,7 @@ class SellerSettlementService
     public function createTransfersFromInvoices(array $invoices): array
     {
         // Retrieve existing StripeTransfers with provided invoice IDs
-        $existingTransfers = $this->stripeTransferRepository
-            ->findTransfersByInvoiceIds(array_keys($invoices));
+        $existingTransfers = $this->stripeTransferRepository->findTransfersByInvoiceIds(array_keys($invoices));
         $type = StripeTransfer::TRANSFER_INVOICE;
         $transfersByInvoiceId = [];
         foreach ($invoices as $invoice) {
@@ -108,8 +115,7 @@ class SellerSettlementService
             }
             
             // Create new transfer
-            $transfer = $this->stripeTransferFactory
-            ->createFromInvoiceTransfer($invoice, $type);
+            $transfer = $this->stripeTransferFactory->createFromInvoiceTransfer($invoice, $type);
             $this->stripeTransferRepository->persist($transfer);
 
             $transfersByInvoiceId[$invoiceId][$type] = $transfer;
@@ -174,12 +180,10 @@ class SellerSettlementService
                 }
 
                 // Use existing payout
-                $payout = $this->stripePayoutFactory
-                ->updateFromInvoice($payout, $invoice, $mclient);
+                $payout = $this->stripePayoutFactory->updateFromInvoice($payout, $invoice, $mclient);
             } else {
                 // Create new payout
-                $payout = $this->stripePayoutFactory
-                ->createFromInvoice($invoice, $mclient);
+                $payout = $this->stripePayoutFactory->createFromInvoice($invoice, $mclient);
                 $this->stripePayoutRepository->persist($payout);
             }
 
@@ -204,6 +208,55 @@ class SellerSettlementService
                 $invoices[$invoiceId],
                 $mclient
             );
+        }
+
+        // Save
+        $this->stripePayoutRepository->flush();
+
+        return $updated;
+    }
+    public function createCommissionTaxTransfersFromInvoices(array $invoices): array
+    {
+        // Retrieve existing StripeTransfers with provided invoice IDs for Commission Tax Invoices
+        $existingTransfers = $this->stripeTransferRepository->findCommissionTaxTransfersByInvoiceIds(array_keys($invoices));
+        $type = StripeTransfer::TRANSFER_COMMISSION_TAX;
+        $transfersByInvoiceId = [];
+        foreach ($invoices as $invoice) {
+            $invoiceId = $invoice['invoice_id'];
+            if (isset($existingTransfers[$invoiceId][$type])) {
+                continue;
+            }
+
+            $transfer = $this->stripeTransferFactory->createFromCommissionTaxInvoiceTransfer($invoice, $type);
+            $this->stripeTransferRepository->persist($transfer);
+
+            $transfersByInvoiceId[$invoiceId][$type] = $transfer;
+        }
+
+        // Save
+        $this->stripeTransferRepository->flush();
+
+        return $transfersByInvoiceId;
+    }
+
+    /**
+     * @return array [ invoice_id => StripeTransfer[] ]
+     */
+    public function updateCommissionTaxTransfersFromInvoices(array $existingTransfers, array $invoices)
+    {
+        $updated = [];
+        foreach ($existingTransfers as $invoiceId => $transfers) {
+            foreach ($transfers as $type => $transfer) {
+                if (!isset($updated[$invoiceId])) {
+                    $updated[$invoiceId] = [];
+                }
+
+                $updated[$invoiceId][$type] = $this->stripeTransferFactory->updateFromCommissionTaxInvoice(
+                    $transfer,
+                    $invoices[(int) $invoiceId],
+                    $type
+                );
+            }
         }
 
         // Save

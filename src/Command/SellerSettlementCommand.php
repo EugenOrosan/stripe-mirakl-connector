@@ -43,16 +43,23 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
      */
     private $sellerSettlementService;
 
+    /**
+     * @var bool
+     */
+    private $enableCommissionTaxFromInvoices;
+
     public function __construct(
         MessageBusInterface $bus,
         ConfigService $configService,
         MiraklClient $miraklClient,
-        SellerSettlementService $sellerSettlementService
+        SellerSettlementService $sellerSettlementService,
+        $enableCommissionTaxFromInvoices
     ) {
         $this->bus = $bus;
         $this->configService = $configService;
         $this->miraklClient = $miraklClient;
         $this->sellerSettlementService = $sellerSettlementService;
+        $this->enableCommissionTaxFromInvoices = $enableCommissionTaxFromInvoices;
         parent::__construct();
     }
 
@@ -103,12 +110,28 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
 
     private function processBacklog(): void
     {
-        $this->logger->info('Executing backlog');
+        $this->logger->info('Executing backlog for retriable transfers and payouts');
+
+        $this->logger->info('Process backlog - Variable enableCommissionTaxFromInvoices enabled: ' . ($this->enableCommissionTaxFromInvoices ? 'yes' : 'no'));
+        if ($this->enableCommissionTaxFromInvoices) {
+            $this->logger->info('Processing retriable commission and tax transfers');
+            $retriableCommissionTaxTransfers = $this->sellerSettlementService->getRetriableCommissionTaxTransfers();
+            if (!empty($retriableCommissionTaxTransfers)) {
+                $commissionTaxFirstInvoiceDate = $this->getFirstInvoiceDateForCommissionAndTax($retriableCommissionTaxTransfers);
+                $commissionTaxInvoices = $this->miraklClient->listInvoicesByDate($commissionTaxFirstInvoiceDate);
+                $commissionTaxTransfersByInvoiceId = $this->sellerSettlementService
+                    ->updateCommissionTaxTransfersFromInvoices($retriableCommissionTaxTransfers, $commissionTaxInvoices);
+                $this->dispatchTransfers($commissionTaxTransfersByInvoiceId);
+            } else {
+                $this->logger->info('No retriable commission and tax transfers');
+            }
+        }
+
         $retriableTransfers = $this->sellerSettlementService->getRetriableTransfers();
         $retriablePayouts = $this->sellerSettlementService->getRetriablePayouts();
-        if (empty($retriableTransfers) && empty($retriablePayouts)) {
-            $this->logger->info('No backlog');
 
+        if (empty($retriableTransfers) && empty($retriablePayouts)) {
+            $this->logger->info('No backlog for transfers and payouts');
             return;
         }
 
@@ -139,10 +162,24 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
         return MiraklClient::getStringFromDatetime(current($createdDates));
     }
 
+    private function getFirstInvoiceDateForCommissionAndTax(array $transfersByInvoiceId): string
+    {
+        $createdDates = array_map(
+            function ($o) {
+                return $o->getMiraklCreatedDate();
+            },
+            $this->flattenTransfers($transfersByInvoiceId)
+        );
+
+        sort($createdDates);
+
+        return MiraklClient::getStringFromDatetime(current($createdDates));
+    }
+
     private function processNewInvoices(): void
     {
         $checkpoint = $this->configService->getSellerSettlementCheckpoint() ?? '';
-        $this->logger->info('Executing for recent invoices, checkpoint: '.$checkpoint);
+        $this->logger->info('Executing for recent invoices, checkpoint: ' . $checkpoint);
         if ($checkpoint) {
             $invoices = $this->miraklClient->listInvoicesByDate($checkpoint);
         } else {
@@ -150,9 +187,16 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
         }
 
         if (empty($invoices)) {
-            $this->logger->info('No new invoice');
-
+            $this->logger->info('No new invoice found since checkpoint: ' . $checkpoint);
             return;
+        }
+
+        $this->logger->info('Process new invoices - Variable enableCommissionTaxFromInvoices enabled: ' . ($this->enableCommissionTaxFromInvoices ? 'yes' : 'no'));
+        if ($this->enableCommissionTaxFromInvoices) {
+            $this->logger->info('Processing commission and tax transfers from invoices');
+            $this->dispatchTransfers(
+                $this->sellerSettlementService->createCommissionTaxTransfersFromInvoices($invoices)
+            );
         }
 
         $this->dispatchTransfers(
@@ -165,7 +209,7 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
 
         $checkpoint = $this->updateCheckpoint($invoices, $checkpoint);
         $this->configService->setSellerSettlementCheckpoint($checkpoint);
-        $this->logger->info('Setting new checkpoint: '.$checkpoint);
+        $this->logger->info('Setting new checkpoint: ' . $checkpoint);
     }
 
     // Return the last valid date_created or the current checkpoint

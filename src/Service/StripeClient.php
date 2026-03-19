@@ -14,7 +14,6 @@ use Stripe\HttpClient\ClientInterface;
 use Stripe\LoginLink;
 use Stripe\PaymentIntent;
 use Stripe\Payout;
-use Stripe\Topup;
 use Stripe\Refund;
 use Stripe\Stripe;
 use Stripe\Transfer;
@@ -195,17 +194,6 @@ class StripeClient
             'metadata' => array_merge($metadata, $this->getDefaultMetadata()),
         ], [
             'stripe_account' => $stripeAccountId,
-        ]);
-    }
-
-    // Topup
-    public function createTopup(string $currency, int $amount, string $description, string $statementDescriptor): Topup
-    {
-        return Topup::create([
-            'amount' => $amount,
-            'currency' => $currency,
-            'description' => $description,
-            'statement_descriptor' => $statementDescriptor,
         ]);
     }
 

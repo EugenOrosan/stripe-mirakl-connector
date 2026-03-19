@@ -42,6 +42,8 @@ parameters:
   app.stripe.prefill_onboarding: "%env(bool:STRIPE_PREFILL_ONBOARDING)%"
   app.stripe.tax_account: "%env(STRIPE_TAX_ACCOUNT)%"
   app.stripe.stripe_account_metadata: "%env(STRIPE_ACCOUNT_METADATA)%"
+  app.stripe.enable_commission_tax_from_invoices: "%env(bool:ENABLE_COMMISSION_TAX_FROM_INVOICES)%"
+  app.stripe.commission_tax_from_invoices_stripe_account: "%env(COMMISSION_TAX_FROM_INVOICES_STRIPE_ACCOUNT)%"
   app.workflow.enable_product_payment_split: "%env(default:deprecated_enable_product_payment_split:bool:ENABLE_PRODUCT_PAYMENT_SPLIT)%"
   app.workflow.enable_service_payment_split: "%env(bool:ENABLE_SERVICE_PAYMENT_SPLIT)%"
   app.workflow.enable_product_payment_refund: "%env(default:deprecated_enable_product_payment_refund:bool:ENABLE_PRODUCT_PAYMENT_REFUND)%"
@@ -98,6 +100,8 @@ services:
       $processRefundsWithoutOriginalTransaction: "%app.workflow.process_refunds_without_original_transaction%"
       $stripeTaxAccount: "%app.stripe.tax_account%"
       $stripeAccountMetadata: "%app.stripe.stripe_account_metadata%"
+      $enableCommissionTaxFromInvoices: "%app.stripe.enable_commission_tax_from_invoices%"
+      $commissionTaxFromInvoicesStripeAccount: "%app.stripe.commission_tax_from_invoices_stripe_account%"
       $taxOrderPostfix: "_TAX"
       $miraklShopKycDisable: "%app.mirakl.shop_kyc_disable%"
 
@@ -175,10 +179,6 @@ services:
   App\Command\SellerSettlementCommand:
     calls:
       - setLogger: ['@monolog.logger.process_payout']
-
-  App\Command\PaymentTopupCommand:
-    calls:
-      - setLogger: ['@monolog.logger.process_topup']
 
   App\Command\SellerMonitorKYCStatusCommand:
     calls:

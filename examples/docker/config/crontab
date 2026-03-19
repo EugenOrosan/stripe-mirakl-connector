@@ -10,5 +10,3 @@
 0       19     5,20   *       *       php /var/www/mirakl-stripe/bin/console connector:dispatch:process-payout -q > /dev/null 2>&1
 # Every day at 08:04.
 4       8       *   *       *       php /var/www/mirakl-stripe/bin/console connector:notify:failed-operation -q > /dev/null 2>&1
-# 06:30 UTC on day-of-month 2 and 17
-30      6       2,17   *       *       php /var/www/mirakl-stripe/bin/console connector:dispatch:process-topups -q > /dev/null 2>&1

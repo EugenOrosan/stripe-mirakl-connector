@@ -434,6 +434,61 @@ class StripeTransferFactory implements LoggerAwareInterface
         return $transfer->setStatus(StripeTransfer::TRANSFER_PENDING);
     }
 
+    public function createFromCommissionTaxInvoiceTransfer(array $invoice, string $type): StripeTransfer
+    {
+        $transfer = new StripeTransfer();
+        $transfer->setType($type);
+        $transfer->setMiraklId($invoice['invoice_id']);
+
+        try {
+            $transfer->setMiraklCreatedDate(
+                MiraklClient::getDatetimeFromString($invoice['date_created'])
+            );
+        } catch (InvalidArgumentException $e) {
+            // Shouldn't happen, see MiraklClient::getDatetimeFromString
+            return $this->abortTransfer($transfer, $e->getMessage());
+        }
+
+        return $this->updateFromCommissionTaxInvoice($transfer, $invoice, $type);
+    }
+
+    public function updateFromCommissionTaxInvoice(StripeTransfer $transfer, array $invoice, string $type): StripeTransfer
+    {
+        // Transfer already created
+        if ($transfer->getTransferId()) {
+            return $this->markTransferAsCreated($transfer);
+        }
+
+        // Shop must have a Stripe account
+        try {
+            $shopAccountMapping = $this->getAccountMapping($invoice['shop_id'] ?? 0);
+        } catch (InvalidArgumentException $e) {
+            // Onboarding still to be completed, let's wait
+            return $this->putCommissionTaxTransferOnHold($transfer, $e->getMessage());
+        }
+
+        // Ignore transfer if shop is marked ignored
+        if ($shopAccountMapping->getIgnored()) {
+            $shopId = $shopAccountMapping->getMiraklShopId();
+
+            return $this->ignoreCommissionTaxTransfer($transfer, "Shop $shopId is ignored");
+        }
+
+        // Save Stripe account corresponding with this shop
+        $transfer->setAccountMapping($shopAccountMapping);
+
+        // Amount and currency
+        try {
+            $transfer->setAmount($this->getCommissionTaxInvoiceAmount($invoice, $type));
+            $transfer->setCurrency(strtolower($invoice['currency_iso_code']));
+        } catch (InvalidArgumentException $e) {
+            return $this->abortTransfer($transfer, $e->getMessage());
+        }
+
+        // All good
+        return $transfer->setStatus(StripeTransfer::TRANSFER_PENDING);
+    }
+
     public function updateFromInvoiceTransfer(StripeTransfer $transfer, array $invoice, string $type): StripeTransfer
     {
         // Transfer already created
@@ -571,6 +626,21 @@ class StripeTransferFactory implements LoggerAwareInterface
         return $amount;
     }
 
+    private function getCommissionTaxInvoiceAmount(array $invoice, string $type): int
+    {
+        $totalPayableOrdersInclTax = $invoice['summary']['total_payable_orders_incl_tax'] ?? 0;
+        $totalRefundOrdersInclTax = $invoice['summary']['total_refund_orders_incl_tax'] ?? 0;
+        $amountTransferred = $invoice['summary']['amount_transferred'] ?? 0;
+
+        $amountCalculated = $totalPayableOrdersInclTax + $totalRefundOrdersInclTax - $amountTransferred;
+        $amount = abs(gmp_intval((string) ($amountCalculated * 100)));
+        if ($amount <= 0) {
+            throw new InvalidArgumentException(sprintf(StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT, $amount));
+        }
+
+        return $amount;
+    }
+
     private function putTransferOnHold(StripeTransfer $transfer, string $reason): StripeTransfer
     {
         $this->logger->info(
@@ -625,6 +695,44 @@ class StripeTransferFactory implements LoggerAwareInterface
 
         return $transfer
             ->setStatus(StripeTransfer::TRANSFER_IGNORED)
+            ->setStatusReason(substr($reason, 0, 1024));
+    }
+
+    private function putCommissionTaxTransferOnHold(StripeTransfer $transfer, string $reason): StripeTransfer
+    {
+        $this->logger->info(
+            'Commission Tax Transfer on hold: ' . $reason,
+            [
+                'orderId' => $transfer->getMiraklId(),
+                'transferId' => $transfer->getTransferId(),
+                'transactionId' => $transfer->getTransactionId(),
+                'statusReason' => $transfer->getStatusReason(),
+                'miraklShopId' => ($transfer->getAccountMapping()) ? $transfer->getAccountMapping()->getMiraklShopId() : 'No shop id available.',
+                'accountMapping' => json_encode($transfer->getAccountMapping() ?? [])
+            ]
+        );
+
+        return $transfer
+            ->setStatus(StripeTransfer::TRANSFER_COMMISSION_TAX_ON_HOLD)
+            ->setStatusReason(substr($reason, 0, 1024));
+    }
+
+    private function ignoreCommissionTaxTransfer(StripeTransfer $transfer, string $reason): StripeTransfer
+    {
+        $this->logger->info(
+            'Commission Tax Transfer ignored: ' . $reason,
+            [
+                'orderId' => $transfer->getMiraklId(),
+                'transferId' => $transfer->getTransferId(),
+                'transactionId' => $transfer->getTransactionId(),
+                'statusReason' => $transfer->getStatusReason(),
+                'miraklShopId' => ($transfer->getAccountMapping()) ? $transfer->getAccountMapping()->getMiraklShopId() : 'No shop id available.',
+                'accountMapping' => json_encode($transfer->getAccountMapping() ?? [])
+            ]
+        );
+
+        return $transfer
+            ->setStatus(StripeTransfer::TRANSFER_COMMISSION_TAX_IGNORED)
             ->setStatusReason(substr($reason, 0, 1024));
     }
 

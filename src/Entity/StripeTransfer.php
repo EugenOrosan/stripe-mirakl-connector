@@ -41,6 +41,9 @@ class StripeTransfer
     public const TRANSFER_FAILED = 'TRANSFER_FAILED';
     public const TRANSFER_CREATED = 'TRANSFER_CREATED';
     public const TRANSFER_IGNORED = 'TRANSFER_IGNORED';
+    public const TRANSFER_COMMISSION_TAX_ON_HOLD = 'TRANSFER_COMMISSION_TAX_ON_HOLD';
+    public const TRANSFER_COMMISSION_TAX_FAILED = 'TRANSFER_COMMISSION_TAX_FAILED';
+    public const TRANSFER_COMMISSION_TAX_IGNORED = 'TRANSFER_COMMISSION_TAX_IGNORED';
 
     // Transfer status reasons: on hold
     public const TRANSFER_STATUS_REASON_SHOP_NOT_READY = 'Cannot find Stripe account for shop ID %s';
@@ -69,6 +72,7 @@ class StripeTransfer
     public const TRANSFER_SUBSCRIPTION = 'TRANSFER_SUBSCRIPTION';
     public const TRANSFER_EXTRA_CREDITS = 'TRANSFER_EXTRA_CREDITS';
     public const TRANSFER_EXTRA_INVOICES = 'TRANSFER_EXTRA_INVOICES';
+    public const TRANSFER_COMMISSION_TAX = 'TRANSFER_COMMISSION_TAX';
 
     /**
      * @ORM\Id()
@@ -149,9 +153,12 @@ class StripeTransfer
             self::TRANSFER_PENDING,
             self::TRANSFER_CREATED,
             self::TRANSFER_FAILED,
+            self::TRANSFER_COMMISSION_TAX_FAILED,
             self::TRANSFER_ON_HOLD,
+            self::TRANSFER_COMMISSION_TAX_ON_HOLD,
             self::TRANSFER_ABORTED,
             self::TRANSFER_IGNORED,
+            self::TRANSFER_COMMISSION_TAX_IGNORED,
         ];
     }
 
@@ -159,6 +166,7 @@ class StripeTransfer
     {
         return [
             self::TRANSFER_FAILED,
+            self::TRANSFER_COMMISSION_TAX_FAILED
         ];
     }
 
@@ -179,7 +187,8 @@ class StripeTransfer
             self::TRANSFER_SUBSCRIPTION,
             self::TRANSFER_EXTRA_CREDITS,
             self::TRANSFER_EXTRA_INVOICES,
-            self::TRANSFER_INVOICE
+            self::TRANSFER_INVOICE,
+            self::TRANSFER_COMMISSION_TAX
         ];
     }
 
@@ -188,6 +197,21 @@ class StripeTransfer
         return [
             self::TRANSFER_PRODUCT_ORDER,
             self::TRANSFER_SERVICE_ORDER,
+        ];
+    }
+
+    public static function getCommissionTaxInvoiceType(): array
+    {
+        return [
+            self::TRANSFER_COMMISSION_TAX,
+        ];
+    }
+
+    public static function getCommissionTaxRetriableStatus(): array
+    {
+        return [
+            self::TRANSFER_COMMISSION_TAX_FAILED,
+            self::TRANSFER_COMMISSION_TAX_ON_HOLD,
         ];
     }
 
@@ -299,7 +323,7 @@ class StripeTransfer
     public function setStatus(string $status): self
     {
         if (!in_array($status, self::getAvailableStatus())) {
-            throw new InvalidArgumentException('Invalid order status. Input was: '.$status);
+            throw new InvalidArgumentException('Invalid order status. Input was: ' . $status);
         }
         $this->status = $status;
 

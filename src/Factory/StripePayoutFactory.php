@@ -53,10 +53,14 @@ class StripePayoutFactory implements LoggerAwareInterface
             $payout->setCurrency(strtolower($invoice['currency_iso_code']));
 
             $shop_accountMapping = $this->getAccountMapping($invoice['shop_id'] ?? 0);
-            if ($shop_accountMapping->getIgnored()) {
-                $shopId = $shop_accountMapping->getMiraklShopId();
+            $shopId = $shop_accountMapping->getMiraklShopId();
 
-                return $this->abortPayout($payout, $shopId, "Shop $shopId is ignored");
+            if ($shop_accountMapping->getIgnored()) {
+                return $this->ignorePayout($payout, $shopId, "Shop $shopId is ignored.");
+            }
+
+            if (!$shop_accountMapping->getPayoutEnabled()) {
+                return $this->putPayoutOnKYCHold($payout, $shopId, "KYC incomplete for shop $shopId.");
             }
         } catch (InvalidArgumentException $e) {
             return $this->abortPayout($payout, $invoice['shop_id'], $e->getMessage());
@@ -96,10 +100,6 @@ class StripePayoutFactory implements LoggerAwareInterface
             throw new InvalidArgumentException(sprintf(StripePayout::PAYOUT_STATUS_REASON_SHOP_NOT_READY, $shopId), 20);
         }
 
-        if (!$mapping->getPayoutEnabled()) {
-            throw new InvalidArgumentException(sprintf(StripePayout::PAYOUT_STATUS_REASON_SHOP_PAYOUT_DISABLED, $shopId), 20);
-        }
-
         return $mapping;
     }
 
@@ -118,6 +118,22 @@ class StripePayoutFactory implements LoggerAwareInterface
         }
 
         return $amount;
+    }
+
+    private function putPayoutOnKYCHold(StripePayout $payout, $shopId, string $reason): StripePayout
+    {
+        $this->logger->info(
+            'Payout on KYC hold: '. $reason,
+            [
+                'invoiceId' => $payout->getMiraklInvoiceId(),
+                'statusReason' => $reason,
+                'miraklShopId' => $shopId
+            ]
+        );
+
+        $payout->setStatusReason($reason);
+
+        return $payout->setStatus(StripePayout::PAYOUT_ON_KYC_HOLD);
     }
 
     private function putPayoutOnHold(StripePayout $payout, $shopId, string $reason): StripePayout
@@ -150,6 +166,22 @@ class StripePayoutFactory implements LoggerAwareInterface
         $payout->setStatusReason($reason);
 
         return $payout->setStatus(StripePayout::PAYOUT_ABORTED);
+    }
+
+    private function ignorePayout(StripePayout $payout, int $shopId, string $reason): StripePayout
+    {
+        $this->logger->info(
+            'Payout ignored: '. $reason,
+            [
+                'invoiceId' => $payout->getMiraklInvoiceId(),
+                'statusReason' => $reason,
+                'miraklShopId' => $shopId
+            ]
+        );
+
+        $payout->setStatusReason($reason);
+
+        return $payout->setStatus(StripePayout::PAYOUT_IGNORED);
     }
 
     private function markPayoutAsCreated(StripePayout $payout): StripePayout
