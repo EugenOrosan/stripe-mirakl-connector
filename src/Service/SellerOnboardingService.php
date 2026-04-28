@@ -11,6 +11,7 @@ use Stripe\Exception\ApiErrorException;
 use Symfony\Component\HttpClient\Exception\ClientException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\Intl\Countries;
 
 class SellerOnboardingService
 {
@@ -175,6 +176,8 @@ class SellerOnboardingService
         $details = [];
         if ($this->stripePrefillOnboarding) {
             $rawShop = $shop->getShop();
+            $country = $this->normalizeCountry($rawShop['contact_informations']['country'] ?? null);
+
             $details = [
                 'business_type' => @$rawShop['is_professional'] ? 'company' : 'individual',
                 'business_profile' => [
@@ -187,7 +190,7 @@ class SellerOnboardingService
                         'city' => $rawShop['contact_informations']['city'] ?? null,
                         'state' => $rawShop['contact_informations']['state'] ?? null,
                         'postal_code' => $rawShop['contact_informations']['zip_code'] ?? null,
-                        'country' => isset($rawShop['contact_informations']['country']) ? substr($rawShop['contact_informations']['country'], 0, 2) : null
+                        'country' => $country
                     ]
                 ],
                 'company' => [
@@ -198,11 +201,11 @@ class SellerOnboardingService
                         'city' => $rawShop['contact_informations']['city'] ?? null,
                         'state' => $rawShop['contact_informations']['state'] ?? null,
                         'postal_code' => $rawShop['contact_informations']['zip_code'] ?? null,
-                        'country' => isset($rawShop['contact_informations']['country']) ? substr($rawShop['contact_informations']['country'], 0, 2) : null
+                        'country' => $country
                     ]
                 ],
                 'email' => $rawShop['contact_informations']['email'] ?? null,
-                'country' => isset($rawShop['contact_informations']['country']) ? substr($rawShop['contact_informations']['country'], 0, 2) : null,
+                'country' => $country
             ];
 
             $this->logger->info('Shop Details from Mirakl: ' . json_encode($rawShop));
@@ -333,5 +336,34 @@ class SellerOnboardingService
         $this->logger->info('AccountLink created with URL: ' . json_encode($accountLink));
 
         return $accountLink;
+    }
+
+    private function normalizeCountry(?string $country): ?string
+    {
+        if (!$country) {
+            return null;
+        }
+
+        $country = strtoupper(trim($country));
+
+        // Already ISO alpha-2 and valid
+        if (Countries::exists($country)) {
+            return $country;
+        }
+
+        foreach (Countries::getAlpha3Codes() as $alpha2 => $alpha3) {
+            if ($alpha3 === $country) {
+                return $alpha2;
+            }
+        }
+
+        // Try to match by country name
+        foreach (Countries::getNames('en') as $code => $name) {
+            if (strtoupper($name) === $country) {
+                return $code;
+            }
+        }
+
+        return null;
     }
 }
