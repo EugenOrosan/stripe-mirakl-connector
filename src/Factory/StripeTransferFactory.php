@@ -617,8 +617,24 @@ class StripeTransferFactory implements LoggerAwareInterface
             StripeTransfer::TRANSFER_INVOICE => 'amount_transferred'
         ];
 
-        $amount = $invoice['summary'][$typeToKey[$type]] ?? 0;
-        $amount = abs(gmp_intval((string) ($amount * 100)));
+        $rawAmount = $invoice['summary'][$typeToKey[$type]] ?? 0;
+
+        try {
+            $amount = abs(gmp_intval((string) ($rawAmount * 100)));
+        } catch (\Throwable $e) {
+            $this->logger->info(
+                'Failed to parse invoice amount: ' . $e->getMessage(),
+                [
+                    'invoiceId' => $invoice['invoice_id'] ?? 'unknown',
+                    'shopId' => $invoice['shop_id'] ?? 'unknown',
+                    'type' => $type,
+                    'rawAmount' => $rawAmount
+                ]
+            );
+
+            throw new InvalidArgumentException(sprintf(StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT, $rawAmount));
+        }
+
         if ($amount <= 0) {
             throw new InvalidArgumentException(sprintf(StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT, $amount));
         }
@@ -633,7 +649,26 @@ class StripeTransferFactory implements LoggerAwareInterface
         $amountTransferred = $invoice['summary']['amount_transferred'] ?? 0;
 
         $amountCalculated = $totalPayableOrdersInclTax + $totalRefundOrdersInclTax - $amountTransferred;
-        $amount = abs(gmp_intval((string) ($amountCalculated * 100)));
+
+        try {
+            $amount = abs(gmp_intval((string) ($amountCalculated * 100)));
+        } catch (\Throwable $e) {
+            $this->logger->info(
+                'Failed to parse commission tax invoice amount: ' . $e->getMessage(),
+                [
+                    'invoiceId' => $invoice['invoice_id'] ?? 'unknown',
+                    'shopId' => $invoice['shop_id'] ?? 'unknown',
+                    'type' => $type,
+                    'amountCalculated' => $amountCalculated,
+                    'totalPayableOrdersInclTax' => $totalPayableOrdersInclTax,
+                    'totalRefundOrdersInclTax' => $totalRefundOrdersInclTax,
+                    'amountTransferred' => $amountTransferred
+                ]
+            );
+
+            throw new InvalidArgumentException(sprintf(StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT, $amountCalculated));
+        }
+
         if ($amount <= 0) {
             throw new InvalidArgumentException(sprintf(StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT, $amount));
         }
