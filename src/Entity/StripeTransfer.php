@@ -129,6 +129,11 @@ class StripeTransfer
     private ?string $currency;
 
     /**
+     * @ORM\Column(type="boolean", options={"default": false})
+     */
+    private bool $reversed = false;
+
+    /**
      * @ORM\Column(type="datetime", nullable=true)
      */
     private ?\DateTimeInterface $miraklCreatedDate = null;
@@ -345,6 +350,18 @@ class StripeTransfer
     public function getCurrency(): ?string
     {
         return $this->currency;
+    }
+
+    public function isReversed(): bool
+    {
+        return $this->reversed;
+    }
+
+    public function setReversed(bool $reversed): self
+    {
+        $this->reversed = $reversed;
+
+        return $this;
     }
 
     public function setCurrency(?string $currency): self

@@ -479,8 +479,23 @@ class StripeTransferFactory implements LoggerAwareInterface
 
         // Amount and currency
         try {
-            $transfer->setAmount($this->getCommissionTaxInvoiceAmount($invoice, $type));
+            $amount = $this->getCommissionTaxInvoiceAmount($invoice, $type);
+            $transfer->setAmount(abs($amount));
+            //If transfer amount < 0, the transfer direction will be reversed (T&C account -> platform)
+            $transfer->setReversed($amount < 0);
             $transfer->setCurrency(strtolower($invoice['currency_iso_code']));
+
+            if ($amount < 0) {
+                $this->logger->info(
+                    'Negative commission tax amount: transfer direction will be reversed',
+                    [
+                        'invoiceId' => $invoice['invoice_id'] ?? 'unknown',
+                        'shopId' => $invoice['shop_id'] ?? 'unknown',
+                        'type' => $type,
+                        'amount' => $amount,
+                    ]
+                );
+            }
         } catch (InvalidArgumentException $e) {
             return $this->abortTransfer($transfer, $e->getMessage());
         }
@@ -651,7 +666,7 @@ class StripeTransferFactory implements LoggerAwareInterface
         $amountCalculated = $totalPayableOrdersInclTax + $totalRefundOrdersInclTax - $amountTransferred;
 
         try {
-            $amount = abs(gmp_intval((string) ($amountCalculated * 100)));
+            $amount = gmp_intval((string) round($amountCalculated * 100));
         } catch (\Throwable $e) {
             $this->logger->info(
                 'Failed to parse commission tax invoice amount: ' . $e->getMessage(),
@@ -669,10 +684,11 @@ class StripeTransferFactory implements LoggerAwareInterface
             throw new InvalidArgumentException(sprintf(StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT, $amountCalculated));
         }
 
-        if ($amount <= 0) {
+        if (0 === $amount) {
             throw new InvalidArgumentException(sprintf(StripeTransfer::TRANSFER_STATUS_REASON_INVALID_AMOUNT, $amount));
         }
 
+        // Can be negative (if negative, the transfer is reversed)
         return $amount;
     }
 

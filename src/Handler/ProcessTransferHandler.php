@@ -102,13 +102,23 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
                     assert(null !== $accountMapping->getStripeAccountId());
 
                     $metadata['miraklShopId'] = $accountMapping->getMiraklShopId();
-                    $response = $this->stripeClient->createTransfer(
-                        $currency,
-                        $amount,
-                        $this->commissionTaxFromInvoicesStripeAccount,
-                        $transfer->getTransactionId(),
-                        $metadata
-                    );
+
+                    if ($transfer->isReversed()) {
+                        $response = $this->stripeClient->createTransferFromConnectedAccount(
+                            $currency,
+                            $amount,
+                            $this->commissionTaxFromInvoicesStripeAccount,
+                            $metadata
+                        );
+                    } else {
+                        $response = $this->stripeClient->createTransfer(
+                            $currency,
+                            $amount,
+                            $this->commissionTaxFromInvoicesStripeAccount,
+                            $transfer->getTransactionId(),
+                            $metadata
+                        );
+                    }
             }
 
             if (isset($response->id)) {

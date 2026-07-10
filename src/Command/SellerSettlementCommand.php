@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Entity\StripeTransfer;
 use App\Exception\InvalidArgumentException;
 use App\Message\ProcessPayoutMessage;
 use App\Message\ProcessTransferMessage;
@@ -48,6 +49,14 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
      */
     private $enableCommissionTaxFromInvoices;
 
+    /**
+     * Reversed commission tax transfers (T&C account -> platform) collected during
+     * the run and dispatched last, after all regular transfers
+     *
+     * @var StripeTransfer[]
+     */
+    private array $reversedTransfers = [];
+
     public function __construct(
         MessageBusInterface $bus,
         ConfigService $configService,
@@ -78,6 +87,10 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
         $shopId = $input->getArgument('mirakl_shop_id');
         if (is_numeric($shopId)) {
             $this->processProvidedShopId((int) $shopId);
+
+            // Reversed commission tax transfers run last
+            $this->dispatchReversedTransfers();
+
             $this->logger->info('job succeeded');
 
             return 0;
@@ -88,6 +101,10 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
 
         // Now up to 100 new invoices
         $this->processNewInvoices();
+
+        // Reversed commission tax transfers run last, after all regular
+        // transfers of this run have been dispatched
+        $this->dispatchReversedTransfers();
 
         $this->logger->info('job succeeded');
 
@@ -232,12 +249,36 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
     private function dispatchTransfers(array $transfersByInvoiceId): void
     {
         foreach ($this->flattenTransfers($transfersByInvoiceId) as $transfer) {
-            if ($transfer->isDispatchable()) {
-                $this->bus->dispatch(new ProcessTransferMessage(
-                    $transfer->getId()
-                ));
+            if (!$transfer->isDispatchable()) {
+                continue;
             }
+
+            // Reversed transfers are dispatched last, at the end of the run
+            if ($transfer->isReversed()) {
+                $this->reversedTransfers[$transfer->getId()] = $transfer;
+                continue;
+            }
+
+            $this->bus->dispatch(new ProcessTransferMessage(
+                $transfer->getId()
+            ));
         }
+    }
+
+    private function dispatchReversedTransfers(): void
+    {
+        foreach ($this->reversedTransfers as $transfer) {
+            $this->logger->info(
+                'Dispatching reversed commission tax transfer at end of run',
+                ['transferId' => $transfer->getId(), 'miraklId' => $transfer->getMiraklId()]
+            );
+
+            $this->bus->dispatch(new ProcessTransferMessage(
+                $transfer->getId()
+            ));
+        }
+
+        $this->reversedTransfers = [];
     }
 
     private function dispatchPayouts(array $payouts): void
