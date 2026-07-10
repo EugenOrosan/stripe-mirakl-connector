@@ -35,6 +35,7 @@ class StripePayout
     // Payout status reasons: aborted
     public const PAYOUT_STATUS_REASON_INVALID_AMOUNT = 'Amount must be positive, input was: %d';
     public const PAYOUT_STATUS_REASON_NO_SHOP_ID = 'No shop ID provided';
+    public const PAYOUT_STATUS_REASON_NO_AVAILABLE_BALANCE = 'Balance verification: no positive available balance (%d %s available, %d %s expected)';
 
     /**
      * @ORM\Id()
@@ -59,6 +60,16 @@ class StripePayout
      * @ORM\Column(type="string", nullable=true)
      */
     private ?string $currency;
+
+    /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private ?int $originalAmount = null;
+
+    /**
+     * @ORM\Column(type="string", nullable=true)
+     */
+    private ?string $originalCurrency = null;
 
     /**
      * @ORM\Column(type="integer", unique=true)
@@ -175,6 +186,30 @@ class StripePayout
     public function setCurrency(string $currency): self
     {
         $this->currency = $currency;
+
+        return $this;
+    }
+
+    public function getOriginalAmount(): ?int
+    {
+        return $this->originalAmount;
+    }
+
+    public function setOriginalAmount(?int $originalAmount): self
+    {
+        $this->originalAmount = $originalAmount;
+
+        return $this;
+    }
+
+    public function getOriginalCurrency(): ?string
+    {
+        return $this->originalCurrency;
+    }
+
+    public function setOriginalCurrency(?string $originalCurrency): self
+    {
+        $this->originalCurrency = $originalCurrency;
 
         return $this;
     }

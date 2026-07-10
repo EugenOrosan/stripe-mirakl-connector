@@ -6,6 +6,7 @@ use Shivas\VersioningBundle\Service\VersionManagerInterface;
 use Stripe\Account;
 use Stripe\AccountLink;
 use Stripe\ApiRequestor;
+use Stripe\Balance;
 use Stripe\Charge;
 use Stripe\Event;
 use Stripe\Exception\ApiErrorException;
@@ -183,6 +184,12 @@ class StripeClient
             'amount' => $amount,
             'metadata' => array_merge($metadata, $this->getDefaultMetadata()),
         ]);
+    }
+
+    // Balance
+    public function retrieveBalance(string $stripeAccountId): Balance
+    {
+        return Balance::retrieve(['stripe_account' => $stripeAccountId]);
     }
 
     // Payout
