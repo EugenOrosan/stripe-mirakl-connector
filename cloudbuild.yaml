@@ -1,0 +1,13 @@
+substitutions:
+  _ARTIFACT: 'us.gcr.io/ecomm-hosting/php-apm'
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: [ 'build',
+            '--file', 'php.Dockerfile',
+            '--network=cloudbuild',
+            '-t', '${_ARTIFACT}:${SHORT_SHA}',
+            '.'
+    ]
+images: [ '${_ARTIFACT}:${SHORT_SHA}']
+options:
+ machineType: 'E2_HIGHCPU_8'
