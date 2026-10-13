@@ -88,12 +88,30 @@ class StripeClient
         return $connect_accounts;
     }
 
+    /**
+     * Countries whose sellers must be created under the full service agreement
+     * with both transfers and card payments capabilities. Other countries are
+     * the recipient TOS countries who should get transfer capability only.
+     */
+    private const FULL_TOS_COUNTRIES = [
+        'US', 'CA', // North America
+        'AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GI', 'GR',
+        'HR', 'HU', 'IE', 'IT', 'LI', 'LT', 'LU', 'LV', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK'
+    ];
+
     public function createStripeAccount(int $shopId, array $details, array $metadata = []): Account
     {
-        return Account::create(array_merge([
+        $country = $details['country'] ?? null;
+        if (null === $country) {
+            throw new \RuntimeException(sprintf(
+                'Refusing to create a Stripe account for Mirakl shop %d: no country could be resolved',
+                $shopId
+            ));
+        }
+
+        $params = [
             'type' => 'express',
             'capabilities' => [
-                'card_payments' => ['requested' => true],
                 'transfers' => ['requested' => true],
             ],
             'settings' => ['payouts' => [
@@ -101,7 +119,16 @@ class StripeClient
                 'schedule' => ['interval' => 'manual'],
             ]],
             'metadata' => array_merge($metadata, $this->getDefaultMetadata()),
-        ], $details));
+        ];
+
+        if (in_array($country, self::FULL_TOS_COUNTRIES, true)) {
+            $params['capabilities']['card_payments'] = ['requested' => true];
+        } else {
+             // Must be set at creation. It cannot be changed once accepted.
+            $params['tos_acceptance'] = ['service_agreement' => 'recipient'];
+        }
+
+        return Account::create(array_merge($params, $details));
     }
 
     public function updateStripeAccount(string $stripeAccountId, array $details, array $metaData = []): Account
