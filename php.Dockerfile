@@ -1,4 +1,4 @@
-FROM php:8.2-fpm-bookworm
+FROM php:8.2.35-fpm-bookworm
 
 ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.29/supercronic-linux-amd64 \
     SUPERCRONIC=supercronic-linux-amd64 \
