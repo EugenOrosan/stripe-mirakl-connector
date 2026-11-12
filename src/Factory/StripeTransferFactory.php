@@ -454,6 +454,13 @@ class StripeTransferFactory implements LoggerAwareInterface
 
     public function updateFromCommissionTaxInvoice(StripeTransfer $transfer, array $invoice, string $type): StripeTransfer
     {
+        if ($transfer->isCommissionTaxCompleted()) {
+            return $transfer;
+        }
+        if (null !== $transfer->getCommissionTaxRequest()) {
+            return $transfer->setStatus(StripeTransfer::TRANSFER_PENDING)->setStatusReason(null);
+        }
+
         // Transfer already created
         if ($transfer->getTransferId()) {
             return $this->markTransferAsCreated($transfer);

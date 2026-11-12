@@ -8,6 +8,7 @@ use App\Message\ProcessTransferMessage;
 use App\Repository\StripeTransferRepository;
 use App\Service\StripeClient;
 use App\Service\MiraklClient;
+use App\Service\DisputeRecoveryService;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Stripe\Exception\ApiErrorException;
@@ -38,21 +39,29 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
     private $commissionTaxFromInvoicesStripeAccount;
 
     /**
+     * @var DisputeRecoveryService
+     */
+    private $disputeRecoveryService;
+
+    /**
      * @param StripeClient $stripeClient
      * @param StripeTransferRepository $stripeTransferRepository
      * @param MiraklClient $miraklClient
      * @param $commissionTaxFromInvoicesStripeAccount
+     * @param DisputeRecoveryService $disputeRecoveryService
      */
     public function __construct(
         StripeClient $stripeClient,
         StripeTransferRepository $stripeTransferRepository,
         MiraklClient $miraklClient,
-        $commissionTaxFromInvoicesStripeAccount
+        $commissionTaxFromInvoicesStripeAccount,
+        DisputeRecoveryService $disputeRecoveryService
     ) {
         $this->stripeClient = $stripeClient;
         $this->stripeTransferRepository = $stripeTransferRepository;
         $this->miraklClient = $miraklClient;
         $this->commissionTaxFromInvoicesStripeAccount = $commissionTaxFromInvoicesStripeAccount;
+        $this->disputeRecoveryService = $disputeRecoveryService;
     }
 
     public function __invoke(ProcessTransferMessage $message): void
@@ -103,6 +112,20 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
 
                     $metadata['miraklShopId'] = $accountMapping->getMiraklShopId();
 
+                    // Dispute recovery may lower the amount. A retry receives the same saved amount and metadata.
+                    $request = $this->disputeRecoveryService->prepareCommissionTaxTransfer($transfer, $metadata);
+                    if (null === $request) {
+                        break;
+                    }
+                    $amount = $request['amount'];
+                    $metadata = $request['metadata'];
+
+                    // Disputes covered the whole T&C amount: nothing is sent to Stripe.
+                    if (0 === $amount && $request['original_amount'] > 0) {
+                        $this->disputeRecoveryService->completeCommissionTaxTransfer($transfer, null);
+                        break;
+                    }
+
                     if ($transfer->isReversed()) {
                         $response = $this->stripeClient->createTransferFromConnectedAccount(
                             $currency,
@@ -118,6 +141,10 @@ class ProcessTransferHandler implements MessageHandlerInterface, LoggerAwareInte
                             $transfer->getTransactionId(),
                             $metadata
                         );
+                    }
+
+                    if (isset($response->id)) {
+                        $this->disputeRecoveryService->completeCommissionTaxTransfer($transfer, $response->id);
                     }
             }
 
