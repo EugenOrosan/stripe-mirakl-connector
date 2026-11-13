@@ -116,12 +116,6 @@ class SellerSettlementCommand extends Command implements LoggerAwareInterface
         $this->logger->info('Executing provided shop', ['shop_id' => $shopId]);
         $invoices = $this->miraklClient->listInvoicesByShopId($shopId);
 
-        if ($this->enableCommissionTaxFromInvoices) {
-            $this->dispatchTransfers(
-                $this->sellerSettlementService->createCommissionTaxTransfersFromInvoices($invoices)
-            );
-        }
-
         $this->dispatchTransfers(
             $this->sellerSettlementService->createTransfersFromInvoices($invoices)
         );

@@ -44,7 +44,6 @@ class StripeTransfer
     public const TRANSFER_COMMISSION_TAX_ON_HOLD = 'TRANSFER_COMMISSION_TAX_ON_HOLD';
     public const TRANSFER_COMMISSION_TAX_FAILED = 'TRANSFER_COMMISSION_TAX_FAILED';
     public const TRANSFER_COMMISSION_TAX_IGNORED = 'TRANSFER_COMMISSION_TAX_IGNORED';
-    public const TRANSFER_COMMISSION_TAX_COVERED_BY_DISPUTES = 'TRANSFER_COMMISSION_TAX_COVERED_BY_DISPUTES';
 
     // Transfer status reasons: on hold
     public const TRANSFER_STATUS_REASON_SHOP_NOT_READY = 'Cannot find Stripe account for shop ID %s';
@@ -135,11 +134,6 @@ class StripeTransfer
     private bool $reversed = false;
 
     /**
-     * @ORM\Column(type="json", nullable=true)
-     */
-    private ?array $commissionTaxRequest = null;
-
-    /**
      * @ORM\Column(type="datetime", nullable=true)
      */
     private ?\DateTimeInterface $miraklCreatedDate = null;
@@ -170,7 +164,6 @@ class StripeTransfer
             self::TRANSFER_ABORTED,
             self::TRANSFER_IGNORED,
             self::TRANSFER_COMMISSION_TAX_IGNORED,
-            self::TRANSFER_COMMISSION_TAX_COVERED_BY_DISPUTES,
         ];
     }
 
@@ -245,28 +238,6 @@ class StripeTransfer
     public function isDispatchable(): bool
     {
         return self::TRANSFER_PENDING === $this->getStatus();
-    }
-
-    public function getCommissionTaxRequest(): ?array
-    {
-        return $this->commissionTaxRequest;
-    }
-
-    public function prepareCommissionTaxRequest(array $request): void
-    {
-        if (null !== $this->commissionTaxRequest) {
-            throw new \LogicException('A prepared commission tax request cannot be replaced.');
-        }
-        $this->commissionTaxRequest = $request;
-        $this->amount = $request['amount'];
-    }
-
-    public function isCommissionTaxCompleted(): bool
-    {
-        return isset($this->status) && in_array($this->status, [
-            self::TRANSFER_CREATED,
-            self::TRANSFER_COMMISSION_TAX_COVERED_BY_DISPUTES,
-        ], true);
     }
 
     public function getId(): ?int

@@ -7,7 +7,6 @@ use App\Message\AccountUpdateKYCMessage;
 use App\Repository\AccountMappingRepository;
 use App\Repository\PaymentMappingRepository;
 use App\Service\StripeClient;
-use App\Service\DisputeRecoveryService;
 use OpenApi\Annotations as OA;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -26,8 +25,6 @@ class StripeWebhookEndpoint extends AbstractController implements LoggerAwareInt
         'account.updated',
         'charge.succeeded',
         'charge.updated',
-        'charge.dispute.closed',
-        'charge.dispute.funds_reinstated',
     ];
 
     public const DEPRECATED_EVENT_TYPES = [
@@ -72,11 +69,6 @@ class StripeWebhookEndpoint extends AbstractController implements LoggerAwareInt
     private $metadataCommercialOrderId;
 
     /**
-     * @var DisputeRecoveryService
-     */
-    private $disputeRecoveryService;
-
-    /**
      * @param MessageBusInterface $bus
      * @param StripeClient $stripeClient
      * @param AccountMappingRepository $accountMappingRepository
@@ -84,7 +76,6 @@ class StripeWebhookEndpoint extends AbstractController implements LoggerAwareInt
      * @param string $webhookSellerSecret
      * @param string $webhookOperatorSecret
      * @param string $metadataCommercialOrderId
-     * @param DisputeRecoveryService $disputeRecoveryService
      */
     public function __construct(
         MessageBusInterface $bus,
@@ -93,8 +84,7 @@ class StripeWebhookEndpoint extends AbstractController implements LoggerAwareInt
         PaymentMappingRepository $paymentMappingRepository,
         string $webhookSellerSecret,
         string $webhookOperatorSecret,
-        string $metadataCommercialOrderId,
-        DisputeRecoveryService $disputeRecoveryService
+        string $metadataCommercialOrderId
     ) {
         $this->bus = $bus;
         $this->stripeClient = $stripeClient;
@@ -103,7 +93,6 @@ class StripeWebhookEndpoint extends AbstractController implements LoggerAwareInt
         $this->webhookSellerSecret = $webhookSellerSecret;
         $this->webhookOperatorSecret = $webhookOperatorSecret;
         $this->metadataCommercialOrderId = $metadataCommercialOrderId;
-        $this->disputeRecoveryService = $disputeRecoveryService;
     }
 
     /**
@@ -184,10 +173,10 @@ class StripeWebhookEndpoint extends AbstractController implements LoggerAwareInt
             $payload = '';
         }
 
-        return $this->handleStripeWebhook($payload, $signatureHeader, $this->webhookOperatorSecret, true);
+        return $this->handleStripeWebhook($payload, $signatureHeader, $this->webhookOperatorSecret);
     }
 
-    protected function handleStripeWebhook(string $payload, string $signatureHeader, string $webhookSecret, bool $operator = false): Response
+    protected function handleStripeWebhook(string $payload, string $signatureHeader, string $webhookSecret): Response
     {
         try {
             $eventType = '';
@@ -220,27 +209,6 @@ class StripeWebhookEndpoint extends AbstractController implements LoggerAwareInt
             $this->logger->error(sprintf('Unhandled event type %s.', (bool) $event['type']));
 
             return new Response('Unhandled event type', Response::HTTP_BAD_REQUEST);
-        }
-
-        if (in_array($event->type, ['charge.dispute.closed', 'charge.dispute.funds_reinstated'], true)) {
-            if (!$operator || !empty($event->account)) {
-                $this->logger->info('Ignoring dispute event outside the marketplace platform webhook.', ['eventId' => $event->id]);
-
-                return new Response('Ignoring non-platform dispute event.', Response::HTTP_OK);
-            }
-            try {
-                $this->disputeRecoveryService->recordEvent($event);
-            } catch (\UnexpectedValueException $e) {
-                $this->logger->error('Invalid dispute webhook.', ['eventId' => $event->id, 'reason' => $e->getMessage()]);
-
-                return new Response($e->getMessage(), Response::HTTP_BAD_REQUEST);
-            } catch (\Throwable $e) {
-                $this->logger->error('Could not persist dispute webhook.', ['eventId' => $event->id, 'exception' => $e]);
-
-                return new Response('Could not persist dispute webhook.', Response::HTTP_INTERNAL_SERVER_ERROR);
-            }
-
-            return new Response('Dispute cost synchronized.', Response::HTTP_OK);
         }
 
         $message = '';
